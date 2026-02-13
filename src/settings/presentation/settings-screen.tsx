@@ -3,35 +3,43 @@
  * SETTINGS SCREEN - Presentation Layer
  * ============================================
  * User settings and preferences including:
- * - Profile editing (nickname, avatar)
+ * - Profile editing with PHOTO UPLOAD
  * - Theme selection
  * - Notification preferences
  * - Validation strictness toggle
  * - Language selection
- * - Data export placeholder
+ * - Data export
  * ============================================
  */
 
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useApp } from "@/src/shared/presentation/app-context"
 import { NeonCard } from "@/src/shared/presentation/components/neon-card"
 import {
   User, Bell, Shield, Globe, Palette, Download,
-  ChevronRight, Save, Smartphone,
+  Save, Smartphone, Camera,
 } from "lucide-react"
 
 export function SettingsScreen() {
   const { user, settings, updateUser, updateSettings } = useApp()
-
   const [nickname, setNickname] = useState(user.nickname)
   const [saved, setSaved] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSaveProfile = () => {
     updateUser({ nickname })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  /** Handle photo upload via file input */
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    updateUser({ avatarUrl: url })
   }
 
   return (
@@ -53,8 +61,35 @@ export function SettingsScreen() {
         </div>
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full neon-border bg-surface-2 glow-cyan shrink-0">
-              <User className="h-8 w-8 text-neon-cyan" />
+            {/* Avatar with upload overlay */}
+            <div className="relative group shrink-0">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full neon-border bg-surface-2 glow-cyan">
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt="Foto de perfil"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-8 w-8 text-neon-cyan" />
+                )}
+              </div>
+              {/* Upload overlay */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Cambiar foto de perfil"
+              >
+                <Camera className="h-5 w-5 text-neon-cyan" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                aria-label="Subir foto de perfil"
+              />
             </div>
             <div className="flex-1">
               <label className="mb-1 block font-mono text-[10px] text-muted-foreground">
@@ -200,19 +235,17 @@ export function SettingsScreen() {
       {/* App Info */}
       <div className="flex flex-col items-center gap-1 py-4">
         <p className="font-mono text-xs font-bold text-neon-cyan text-glow-cyan">NervyAI I.M.</p>
-        <p className="font-mono text-[10px] text-muted-foreground">v1.0.0 | Desarrollo Personal</p>
+        <p className="font-mono text-[10px] text-muted-foreground">v2.0.0 | Desarrollo Personal</p>
         <div className="flex items-center gap-1 mt-1">
           <Smartphone className="h-3 w-3 text-muted-foreground" />
-          <p className="font-mono text-[9px] text-muted-foreground">
-            Powered by NervyAI
-          </p>
+          <p className="font-mono text-[9px] text-muted-foreground">Powered by NervyAI</p>
         </div>
       </div>
     </div>
   )
 }
 
-/** Reusable toggle switch component */
+/** Reusable toggle switch */
 function SettingsToggle({
   label,
   value,
@@ -229,9 +262,7 @@ function SettingsToggle({
         onClick={() => onChange(!value)}
         role="switch"
         aria-checked={value}
-        className={`relative h-6 w-11 rounded-full transition-all ${
-          value ? "bg-neon-cyan/30" : "bg-surface-3"
-        }`}
+        className={`relative h-6 w-11 rounded-full transition-all ${value ? "bg-neon-cyan/30" : "bg-surface-3"}`}
       >
         <span
           className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full transition-all ${

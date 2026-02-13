@@ -2,9 +2,9 @@
  * ============================================
  * DASHBOARD SCREEN - Presentation Layer
  * ============================================
- * The main home screen showing:
- * - User profile card with neon avatar frame
- * - Mini radar chart (progress overview)
+ * Main home screen with:
+ * - User profile card with avatar photo
+ * - Mini radar chart (overview)
  * - Quick stat cards
  * - Quick action buttons
  * - Recent activity feed
@@ -15,8 +15,9 @@
 
 import { useApp } from "@/src/shared/presentation/app-context"
 import { NeonCard } from "@/src/shared/presentation/components/neon-card"
-import { CATEGORY_COLORS } from "@/src/shared/presentation/category-colors"
+import { getCategoryColor } from "@/src/shared/presentation/category-colors"
 import { MiniRadarChart } from "./mini-radar-chart"
+import { getProgressPercent } from "@/src/goals/domain/goal.entity"
 import { User, Flame, Zap, Trophy, Grid3X3, CalendarDays, ListChecks, Radar } from "lucide-react"
 import type { NavTab } from "@/src/shared/presentation/components/bottom-nav"
 
@@ -30,16 +31,24 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
   const completedToday = tasks.filter((t) => t.status === "completed").length
   const pendingTasks = tasks.filter((t) => t.status === "pending" || t.status === "in-progress").length
   const totalGoalProgress = goals.length > 0
-    ? Math.round(goals.reduce((sum, g) => sum + (g.currentCount / g.targetCount) * 100, 0) / goals.length)
+    ? Math.round(goals.reduce((sum, g) => sum + getProgressPercent(g), 0) / goals.length)
     : 0
 
   return (
     <div className="flex flex-col gap-6 pb-4">
-      {/* Header */}
+      {/* Header with Avatar */}
       <header className="flex items-center gap-4">
         <div className="relative">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full neon-border bg-surface-2 glow-cyan">
-            <User className="h-8 w-8 text-neon-cyan" />
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full neon-border bg-surface-2 glow-cyan">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt="Foto de perfil"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <User className="h-8 w-8 text-neon-cyan" />
+            )}
           </div>
           <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-neon-cyan text-[10px] font-mono font-bold text-background">
             {user.level}
@@ -70,11 +79,11 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
           <MiniRadarChart categories={skills.categories} />
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
-          {skills.categories.map((cat) => {
-            const colors = CATEGORY_COLORS[cat.id]
+          {skills.categories.slice(0, 6).map((cat) => {
+            const colors = getCategoryColor(cat.id)
             return (
               <div key={cat.id} className={`flex items-center gap-1.5 rounded-md ${colors.bgFaded} px-2 py-1`}>
-                <span className={`h-2 w-2 rounded-full`} style={{ backgroundColor: colors.hex }} />
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.hex }} />
                 <span className="font-mono text-[9px] text-muted-foreground truncate">{cat.name.split(" ")[0]}</span>
                 <span className={`ml-auto font-mono text-[10px] font-bold ${colors.text}`}>{cat.level}</span>
               </div>
@@ -131,7 +140,7 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
         <h2 className="mb-3 font-mono text-sm font-semibold text-foreground">Accesos Rapidos</h2>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { id: "goals" as NavTab, label: "Grid", icon: Grid3X3, color: "text-neon-cyan", bg: "bg-neon-cyan/10" },
+            { id: "goals" as NavTab, label: "Objetivos", icon: Grid3X3, color: "text-neon-cyan", bg: "bg-neon-cyan/10" },
             { id: "calendar" as NavTab, label: "Agenda", icon: CalendarDays, color: "text-neon-magenta", bg: "bg-neon-magenta/10" },
             { id: "tasks" as NavTab, label: "Tareas", icon: ListChecks, color: "text-neon-lime", bg: "bg-neon-lime/10" },
             { id: "radar" as NavTab, label: "Radar", icon: Radar, color: "text-neon-orange", bg: "bg-neon-orange/10" },
@@ -155,16 +164,13 @@ export function DashboardScreen({ onNavigate }: DashboardScreenProps) {
         <h2 className="mb-3 font-mono text-sm font-semibold text-foreground">Actividad Reciente</h2>
         <div className="flex flex-col gap-2">
           {tasks.slice(0, 5).map((task) => {
-            const colors = CATEGORY_COLORS[task.skillCategoryId]
+            const colors = getCategoryColor(task.skillCategoryId)
             return (
               <div
                 key={task.id}
                 className={`flex items-center gap-3 rounded-lg border ${colors.border} ${colors.bgFaded} px-3 py-2`}
               >
-                <span
-                  className="h-2 w-2 rounded-full shrink-0"
-                  style={{ backgroundColor: colors.hex }}
-                />
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: colors.hex }} />
                 <div className="flex-1 min-w-0">
                   <p className="font-mono text-xs text-foreground truncate">{task.title}</p>
                   <p className="font-mono text-[10px] text-muted-foreground">

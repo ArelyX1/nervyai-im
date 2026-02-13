@@ -2,8 +2,9 @@
  * ============================================
  * GOALS PORT - Application Layer (Hexagonal)
  * ============================================
- * Defines the interface (port) for goal
- * data persistence adapters.
+ * Defines the interface (port) for goal data
+ * persistence. Goals use DailyEntry-based
+ * progress tracking instead of countable grids.
  * ============================================
  */
 
@@ -15,5 +16,7 @@ export interface GoalsPort {
   addGoal(goal: Goal): Goal
   updateGoal(id: string, updates: Partial<Goal>): Goal | undefined
   deleteGoal(id: string): boolean
-  incrementGoalProgress(id: string, categoryId: string): Goal | undefined
+
+  /** Toggle a daily entry for a goal on a given date */
+  logDailyProgress(goalId: string, date: string, note?: string): Goal | undefined
 }

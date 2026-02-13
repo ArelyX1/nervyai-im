@@ -3,68 +3,74 @@
  * GOALS MEMORY ADAPTER - Infrastructure Layer
  * ============================================
  * In-memory implementation of GoalsPort.
- * Manages the goals grid with cell illumination
- * logic and overachievement detection.
+ * Uses DailyEntry-based tracking. Each goal
+ * tracks daily completions instead of grid cells.
  * ============================================
  */
 
 import type { GoalsPort } from "@/src/goals/application/goals.port"
-import { type Goal, createGoal, isGoalOverachieved } from "@/src/goals/domain/goal.entity"
-import type { SkillCategoryId } from "@/src/skills/domain/skill.entity"
+import { type Goal, type DailyEntry, createGoal, toDateKey } from "@/src/goals/domain/goal.entity"
+
+// ─── SEED DATA ─────────────────────────────────
+
+function generatePastEntries(daysBack: number, completedCount: number): DailyEntry[] {
+  const entries: DailyEntry[] = []
+  const today = new Date()
+  for (let i = daysBack; i > 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    if (entries.filter((e) => e.completed).length < completedCount) {
+      entries.push({ date: toDateKey(d), completed: Math.random() > 0.25 })
+    }
+  }
+  // Ensure we hit the completed count
+  const completedEntries = entries.filter((e) => e.completed).length
+  if (completedEntries < completedCount) {
+    for (let i = 0; i < entries.length && entries.filter((e) => e.completed).length < completedCount; i++) {
+      if (!entries[i].completed) {
+        entries[i] = { ...entries[i], completed: true }
+      }
+    }
+  }
+  return entries
+}
 
 const SEED_GOALS: Goal[] = [
   createGoal({
     title: "Dominar Algoritmos",
-    description: "Completar 50 problemas de algoritmos",
-    targetCount: 50,
+    description: "Resolver un problema de algoritmos cada dia",
+    dailyAction: "Resolver 1 problema en LeetCode",
+    targetDays: 50,
     categoryId: "intellect",
-    currentCount: 32,
-    cells: Array.from({ length: 50 }, (_, i) => ({
-      index: i,
-      filled: i < 32,
-      categoryId: i < 32 ? "intellect" as SkillCategoryId : null,
-      ...(i < 32 ? { filledAt: new Date(Date.now() - (32 - i) * 86400000).toISOString() } : {}),
-    })),
+    entries: generatePastEntries(40, 32),
   }),
   createGoal({
     title: "Racha de Ejercicio",
     description: "Entrenar 30 dias consecutivos",
-    targetCount: 30,
+    dailyAction: "Entrenar minimo 30 minutos",
+    targetDays: 30,
     categoryId: "wellness",
-    currentCount: 18,
-    cells: Array.from({ length: 30 }, (_, i) => ({
-      index: i,
-      filled: i < 18,
-      categoryId: i < 18 ? "wellness" as SkillCategoryId : null,
-      ...(i < 18 ? { filledAt: new Date(Date.now() - (18 - i) * 86400000).toISOString() } : {}),
-    })),
+    entries: generatePastEntries(25, 18),
   }),
   createGoal({
-    title: "Leer 12 Libros",
-    description: "Un libro por mes durante todo el año",
-    targetCount: 12,
+    title: "Leer Cada Dia",
+    description: "Leer al menos 20 paginas diarias",
+    dailyAction: "Leer 20 paginas de un libro",
+    targetDays: 60,
     categoryId: "humanities",
-    currentCount: 5,
-    cells: Array.from({ length: 12 }, (_, i) => ({
-      index: i,
-      filled: i < 5,
-      categoryId: i < 5 ? "humanities" as SkillCategoryId : null,
-      ...(i < 5 ? { filledAt: new Date(Date.now() - (5 - i) * 2592000000).toISOString() } : {}),
-    })),
+    entries: generatePastEntries(15, 10),
   }),
   createGoal({
     title: "Portfolio Creativo",
-    description: "Crear 20 piezas de arte digital",
-    targetCount: 20,
+    description: "Crear una pieza de arte digital cada dia",
+    dailyAction: "Crear 1 pieza de arte/diseno",
+    targetDays: 30,
     categoryId: "creativity",
-    currentCount: 8,
-    cells: Array.from({ length: 20 }, (_, i) => ({
-      index: i,
-      filled: i < 8,
-      categoryId: i < 8 ? "creativity" as SkillCategoryId : null,
-    })),
+    entries: generatePastEntries(12, 8),
   }),
 ]
+
+// ─── ADAPTER FACTORY ───────────────────────────
 
 export function createGoalsMemoryAdapter(): GoalsPort {
   let goals: Goal[] = [...SEED_GOALS]
@@ -92,40 +98,28 @@ export function createGoalsMemoryAdapter(): GoalsPort {
       return goals.length < len
     },
 
-    incrementGoalProgress(id, categoryId) {
-      const idx = goals.findIndex((g) => g.id === id)
+    logDailyProgress(goalId, date, note) {
+      const idx = goals.findIndex((g) => g.id === goalId)
       if (idx === -1) return undefined
 
       const goal = goals[idx]
-      const newCount = goal.currentCount + 1
-      const updatedCells = [...goal.cells]
+      const existingIdx = goal.entries.findIndex((e) => e.date === date)
 
-      // Fill the next empty cell
-      const emptyIdx = updatedCells.findIndex((c) => !c.filled)
-      if (emptyIdx !== -1) {
-        updatedCells[emptyIdx] = {
-          ...updatedCells[emptyIdx],
-          filled: true,
-          categoryId: categoryId as SkillCategoryId,
-          filledAt: new Date().toISOString(),
+      let newEntries: DailyEntry[]
+      if (existingIdx >= 0) {
+        // Toggle: if already completed, uncomplete
+        newEntries = [...goal.entries]
+        newEntries[existingIdx] = {
+          ...newEntries[existingIdx],
+          completed: !newEntries[existingIdx].completed,
+          note: note || newEntries[existingIdx].note,
         }
       } else {
-        // Overachieved: expand grid
-        updatedCells.push({
-          index: updatedCells.length,
-          filled: true,
-          categoryId: categoryId as SkillCategoryId,
-          filledAt: new Date().toISOString(),
-        })
+        // New entry
+        newEntries = [...goal.entries, { date, completed: true, note }]
       }
 
-      goals[idx] = {
-        ...goal,
-        currentCount: newCount,
-        cells: updatedCells,
-        isOverachieved: isGoalOverachieved({ ...goal, currentCount: newCount }),
-      }
-
+      goals[idx] = { ...goal, entries: newEntries }
       return goals[idx]
     },
   }
