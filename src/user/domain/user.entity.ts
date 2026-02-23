@@ -7,6 +7,8 @@
  * ============================================
  */
 
+import { generateUUID } from "@/src/tasks/domain/task.entity"
+
 /** User profile information */
 export interface UserProfile {
   readonly id: string
@@ -31,7 +33,7 @@ export interface UserSettings {
 /** Default user profile for initial state */
 export function createDefaultUser(): UserProfile {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     nickname: "CyberRunner",
     avatarUrl: null,
     level: 1,

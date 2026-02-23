@@ -17,6 +17,7 @@
 import { useState, useCallback } from "react"
 import { skillsAdapter, tasksAdapter, goalsAdapter } from "@/src/shared/infrastructure/container"
 import type { SkillRadarData, SkillCategory } from "@/src/skills/domain/skill.entity"
+import { findNode } from "@/src/skills/domain/skill.entity"
 import type { Task } from "@/src/tasks/domain/task.entity"
 import type { Goal } from "@/src/goals/domain/goal.entity"
 import type { UserProfile, UserSettings } from "@/src/user/domain/user.entity"
@@ -47,8 +48,10 @@ export interface AppStore {
   // Skill CRUD actions
   addCategory: (name: string, icon: string, color: string) => void
   removeCategory: (categoryId: string) => void
-  addSkillNode: (categoryId: string, parentNodeId: string | null, name: string) => void
-  removeSkillNode: (categoryId: string, nodeId: string) => void
+  addSkillNode: (categoryId: string, parentNodeId: string | null, name: string) => SkillRadarData
+  removeSkillNode: (categoryId: string, nodeId: string) => SkillRadarData
+  distributeTransitionXp: (categoryId: string, parentNodeId: string, allocations: { nodeId: string; xp: number }[]) => SkillRadarData
+  distributeTransitionEqually: (categoryId: string, parentNodeId: string | null) => SkillRadarData
 
   // User actions
   updateUser: (updates: Partial<UserProfile>) => void
@@ -86,13 +89,27 @@ export function useAppStore(): AppStore {
     tasksAdapter.completeTask(id)
     const xp = calculateXpWithStreak(task)
 
-    // Award XP to first child node of matching category
+    // Award XP to appropriate node. If user selected a parent that now has children,
+    // prefer a 'transition' child (created when we moved existing XP into children).
     const cat = skillsAdapter.getCategory(task.skillCategoryId)
     if (cat && cat.children.length > 0) {
-      const targetNode = task.subSkillId
-        ? task.subSkillId
-        : cat.children[0].id
-      skillsAdapter.updateNodeXp(task.skillCategoryId, targetNode, xp)
+      let targetNodeId: string
+      if (task.subSkillId) {
+        const node = findNode(cat.children, task.subSkillId)
+        if (node) {
+          if (node.children.length > 0) {
+            const trans = node.children.find((c) => c.id.startsWith("trans-") || /general/i.test(c.name))
+            targetNodeId = trans ? trans.id : task.subSkillId
+          } else {
+            targetNodeId = task.subSkillId
+          }
+        } else {
+          targetNodeId = cat.children[0].id
+        }
+      } else {
+        targetNodeId = cat.children[0].id
+      }
+      skillsAdapter.updateNodeXp(task.skillCategoryId, targetNodeId, xp)
     }
 
     setUser((prev) => ({
@@ -143,12 +160,29 @@ export function useAppStore(): AppStore {
   }, [])
 
   const addSkillNode = useCallback((categoryId: string, parentNodeId: string | null, name: string) => {
-    setSkills(skillsAdapter.addSkillNode(categoryId, parentNodeId, name))
+    const snapshot = skillsAdapter.addSkillNode(categoryId, parentNodeId, name)
+    setSkills(snapshot)
+    return snapshot
   }, [])
 
   const removeSkillNode = useCallback((categoryId: string, nodeId: string) => {
-    setSkills(skillsAdapter.removeSkillNode(categoryId, nodeId))
+    const snapshot = skillsAdapter.removeSkillNode(categoryId, nodeId)
+    setSkills(snapshot)
+    return snapshot
   }, [])
+
+  const distributeTransitionXp = useCallback((categoryId: string, parentNodeId: string, allocations: { nodeId: string; xp: number }[]) => {
+    const snapshot = skillsAdapter.distributeTransitionXp(categoryId, parentNodeId, allocations)
+    setSkills(snapshot)
+    return snapshot
+  }, [])
+  
+    const distributeTransitionEqually = useCallback((categoryId: string, parentNodeId: string | null) => {
+      // Calls adapter helper to distribute transition XP equally across children
+      const snapshot = (skillsAdapter as any).distributeTransitionEqually(categoryId, parentNodeId)
+      setSkills(snapshot)
+      return snapshot
+    }, [])
 
   // ─── USER ACTIONS ──────────────────────────
 
@@ -165,6 +199,7 @@ export function useAppStore(): AppStore {
     addTask, completeTask, deleteTask, updateTask,
     addGoal, deleteGoal, logDailyGoalProgress,
     addCategory, removeCategory, addSkillNode, removeSkillNode,
-    updateUser, updateSettings, refresh,
+      distributeTransitionXp, distributeTransitionEqually,
+      updateUser, updateSettings, refresh,
   }
 }

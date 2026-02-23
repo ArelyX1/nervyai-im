@@ -16,7 +16,7 @@ import { useState } from "react"
 import { useApp } from "@/src/shared/presentation/app-context"
 import { NeonCard } from "@/src/shared/presentation/components/neon-card"
 import { CATEGORY_COLORS } from "@/src/shared/presentation/category-colors"
-import type { SkillCategoryId } from "@/src/skills/domain/skill.entity"
+import type { SkillCategoryId, SkillNode } from "@/src/skills/domain/skill.entity"
 import type { TaskFrequency, TaskPriority, ValidationRule, TaskStatus } from "@/src/tasks/domain/task.entity"
 import {
   Plus, CheckCircle2, Trash2, Clock, Flame,
@@ -337,7 +337,7 @@ function AddTaskForm({
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [skillCategoryId, setSkillCategoryId] = useState<SkillCategoryId>("intellect")
-  const [subSkillId, setSubSkillId] = useState("")
+  const [selectedNodePath, setSelectedNodePath] = useState<string[]>([])
   const [frequency, setFrequency] = useState<TaskFrequency>("daily")
   const [priority, setPriority] = useState<TaskPriority>("medium")
   const [validationRule, setValidationRule] = useState<ValidationRule>("manual-confirm")
@@ -348,6 +348,21 @@ function AddTaskForm({
 
   const selectedCategory = skills.categories.find((c) => c.id === skillCategoryId)
 
+  // Build arrays of nodes to render a select for each level (cascading selects)
+  const selects: SkillNode[][] = []
+  if (selectedCategory) {
+    let nodes = selectedCategory.children
+    selects.push(nodes)
+    for (let i = 0; i < selectedNodePath.length; i++) {
+      const selId = selectedNodePath[i]
+      const found = nodes.find((n) => n.id === selId)
+      if (!found) break
+      nodes = found.children
+      if (nodes.length > 0) selects.push(nodes)
+      else break
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
@@ -355,7 +370,7 @@ function AddTaskForm({
       title,
       description,
       skillCategoryId,
-      subSkillId: subSkillId || undefined,
+      subSkillId: selectedNodePath.length > 0 ? selectedNodePath[selectedNodePath.length - 1] : undefined,
       frequency,
       priority,
       validationRule,
@@ -386,16 +401,35 @@ function AddTaskForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Categoria</label>
-            <select value={skillCategoryId} onChange={(e) => { setSkillCategoryId(e.target.value as SkillCategoryId); setSubSkillId("") }} className={selectCls}>
+            <select value={skillCategoryId} onChange={(e) => { setSkillCategoryId(e.target.value as SkillCategoryId); setSelectedNodePath([]) }} className={selectCls}>
               {skills.categories.map((c) => (<option key={c.id} value={c.id}>{c.name.split("&")[0].trim()}</option>))}
             </select>
           </div>
           <div>
             <label className={labelCls}>Sub-Habilidad</label>
-            <select value={subSkillId} onChange={(e) => setSubSkillId(e.target.value)} className={selectCls}>
-              <option value="">Ninguna</option>
-              {selectedCategory?.subSkills.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-            </select>
+            <div className="flex flex-col gap-2">
+              {selects.map((nodesAtLevel, level) => (
+                <select
+                  key={level}
+                  value={selectedNodePath[level] ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (!val) {
+                      setSelectedNodePath((prev) => prev.slice(0, level))
+                    } else {
+                      setSelectedNodePath((prev) => {
+                        const next = [...prev.slice(0, level), val]
+                        return next
+                      })
+                    }
+                  }}
+                  className={selectCls}
+                >
+                  <option value="">Ninguna</option>
+                  {nodesAtLevel.map((n) => (<option key={n.id} value={n.id}>{n.name}</option>))}
+                </select>
+              ))}
+            </div>
           </div>
         </div>
 

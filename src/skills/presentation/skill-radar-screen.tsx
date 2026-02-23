@@ -23,7 +23,7 @@ import {
 import { useApp } from "@/src/shared/presentation/app-context"
 import { NeonCard } from "@/src/shared/presentation/components/neon-card"
 import { getCategoryColor } from "@/src/shared/presentation/category-colors"
-import { computeNodeLevel } from "@/src/skills/domain/skill.entity"
+import { computeNodeLevel, findNode } from "@/src/skills/domain/skill.entity"
 import type { SkillCategory, SkillNode } from "@/src/skills/domain/skill.entity"
 import { ChevronLeft, ChevronRight, Plus, Trash2, Sparkles, X } from "lucide-react"
 
@@ -43,7 +43,7 @@ interface DrillState {
 // ─── MAIN SCREEN ───────────────────────────────
 
 export function SkillRadarScreen() {
-  const { skills, addCategory, removeCategory, addSkillNode, removeSkillNode } = useApp()
+  const { skills, addCategory, removeCategory, addSkillNode, removeSkillNode, distributeTransitionXp, distributeTransitionEqually } = useApp()
   const [drill, setDrill] = useState<DrillState | null>(null)
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -119,20 +119,60 @@ export function SkillRadarScreen() {
     const cat = skills.categories.find((c) => c.id === drill.categoryId)
     if (!cat) { setDrill(null); return null }
 
-    return (
+      return (
       <DrillDownView
         category={cat}
         drill={drill}
         onBack={goBack}
         onDrillNode={drillIntoNode}
-        onAddNode={(name) => {
-          addSkillNode(drill.categoryId, drill.parentNodeId, name)
-          // Refresh after state update
-          setTimeout(refreshDrill, 10)
+        onAddNode={(parentId, name) => {
+          const newSnapshot = addSkillNode(drill.categoryId, parentId, name)
+          // derive current nodes from new snapshot synchronously
+          const updatedCat = newSnapshot.categories.find((c) => c.id === drill.categoryId)
+          if (!updatedCat) return
+          let nodes = updatedCat.children
+          for (const crumb of drill.breadcrumb) {
+            const found = nodes.find((n) => n.id === crumb.id)
+            if (found) nodes = found.children
+            else { nodes = []; break }
+          }
+          setDrill({ ...drill, currentNodes: nodes, parentNodeId: parentId })
         }}
         onRemoveNode={(nodeId) => {
-          removeSkillNode(drill.categoryId, nodeId)
-          setTimeout(refreshDrill, 10)
+          const newSnapshot = removeSkillNode(drill.categoryId, nodeId)
+          const updatedCat = newSnapshot.categories.find((c) => c.id === drill.categoryId)
+          if (!updatedCat) return
+          let nodes = updatedCat.children
+          for (const crumb of drill.breadcrumb) {
+            const found = nodes.find((n) => n.id === crumb.id)
+            if (found) nodes = found.children
+            else { nodes = []; break }
+          }
+          setDrill({ ...drill, currentNodes: nodes })
+        }}
+        onDistribute={(parentId, allocs) => {
+          const newSnapshot = distributeTransitionXp(drill.categoryId, parentId, allocs)
+          const updatedCat = newSnapshot.categories.find((c) => c.id === drill.categoryId)
+          if (!updatedCat) return
+          let nodes = updatedCat.children
+          for (const crumb of drill.breadcrumb) {
+            const found = nodes.find((n) => n.id === crumb.id)
+            if (found) nodes = found.children
+            else { nodes = []; break }
+          }
+          setDrill({ ...drill, currentNodes: nodes })
+        }}
+        onDistributeEqual={(parentId) => {
+          const newSnapshot = distributeTransitionEqually(drill.categoryId, parentId)
+          const updatedCat = newSnapshot.categories.find((c) => c.id === drill.categoryId)
+          if (!updatedCat) return
+          let nodes = updatedCat.children
+          for (const crumb of drill.breadcrumb) {
+            const found = nodes.find((n) => n.id === crumb.id)
+            if (found) nodes = found.children
+            else { nodes = []; break }
+          }
+          setDrill({ ...drill, currentNodes: nodes })
         }}
       />
     )
@@ -263,21 +303,29 @@ function DrillDownView({
   onDrillNode,
   onAddNode,
   onRemoveNode,
+  onDistribute,
+  onDistributeEqual,
 }: {
   category: SkillCategory
   drill: DrillState
   onBack: () => void
   onDrillNode: (node: SkillNode) => void
-  onAddNode: (name: string) => void
+  onAddNode: (parentId: string | null, name: string) => void
   onRemoveNode: (nodeId: string) => void
+  onDistribute: (parentId: string, allocations: { nodeId: string; xp: number }[]) => void
+  onDistributeEqual: (parentId: string | null) => void
 }) {
   const colors = getCategoryColor(category.id)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newName, setNewName] = useState("")
+  const [openAddFor, setOpenAddFor] = useState<string | null>(null)
+  const [inlineName, setInlineName] = useState("")
+  const [openSplitFor, setOpenSplitFor] = useState<string | null>(null)
+  const [allocations, setAllocations] = useState<Record<string, number>>({})
 
   const handleAdd = () => {
     if (!newName.trim()) return
-    onAddNode(newName.trim())
+    onAddNode(drill.parentNodeId, newName.trim())
     setNewName("")
     setShowAddForm(false)
   }
@@ -288,11 +336,11 @@ function DrillDownView({
     fullMark: 100,
   }))
 
+  // For bar chart, show aggregated XP when a node has children (including transition child)
+  // Use computed level (%) for each node so parent reflects average of children
   const barData = drill.currentNodes.map((n) => ({
     name: n.name,
-    xp: n.xpCurrent,
-    needed: n.xpRequired,
-    level: computeNodeLevel(n),
+    level: computeNodeLevel(n), // 0-100
   }))
 
   // Build breadcrumb labels
@@ -380,10 +428,10 @@ function DrillDownView({
           <ResponsiveContainer width="100%" height={Math.max(120, drill.currentNodes.length * 36)}>
             <BarChart data={barData} layout="vertical" barCategoryGap={6}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(225, 30%, 18%)" />
-              <XAxis type="number" domain={[0, 1000]} tick={{ fill: "hsl(185, 40%, 55%)", fontSize: 9, fontFamily: "monospace" }} />
+              <XAxis type="number" domain={[0, 100]} tick={{ fill: "hsl(185, 40%, 55%)", fontSize: 9, fontFamily: "monospace" }} />
               <YAxis type="category" dataKey="name" width={85} tick={{ fill: "hsl(185, 40%, 55%)", fontSize: 9, fontFamily: "monospace" }} />
               <Tooltip contentStyle={{ backgroundColor: "hsl(225, 35%, 9%)", border: `1px solid ${colors.hex}`, borderRadius: "8px", fontFamily: "monospace", fontSize: "11px", color: "hsl(185, 100%, 92%)" }} />
-              <Bar dataKey="xp" radius={[0, 4, 4, 0]} barSize={14}>
+              <Bar dataKey="level" radius={[0, 4, 4, 0]} barSize={14}>
                 {barData.map((_, i) => <Cell key={i} fill={colors.hex} fillOpacity={0.7} />)}
               </Bar>
             </BarChart>
@@ -426,16 +474,67 @@ function DrillDownView({
                     </span>
                   )}
                 </div>
-                <p className="font-mono text-[10px] text-muted-foreground">
-                  {node.xpCurrent}/{node.xpRequired} XP
-                </p>
-                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(node.xpCurrent / node.xpRequired) * 100}%`, backgroundColor: colors.hex }} />
-                </div>
+                {/* Show aggregated XP when node has children (include transition child) to avoid showing 0 */}
+                {node.children.length > 0 ? (
+                  (() => {
+                    const totalCurrent = node.children.reduce((s, c) => s + (c.xpCurrent || 0), 0)
+                    const totalRequired = node.children.reduce((s, c) => s + (c.xpRequired || 0), 0) || node.xpRequired
+                    const pct = totalRequired > 0 ? (totalCurrent / totalRequired) * 100 : 0
+                    return (
+                      <>
+                        <p className="font-mono text-[10px] text-muted-foreground">{totalCurrent}/{totalRequired} XP (agregado)</p>
+                        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: colors.hex }} />
+                        </div>
+                      </>
+                    )
+                  })()
+                ) : (
+                  <>
+                    <p className="font-mono text-[10px] text-muted-foreground">
+                      {node.xpCurrent}/{node.xpRequired} XP
+                    </p>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(node.xpCurrent / node.xpRequired) * 100}%`, backgroundColor: colors.hex }} />
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                 <div className={`font-mono text-lg font-bold ${colors.text}`}>{level}</div>
                 {hasChildren && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                {hasChildren && (
+                  <div className="ml-2" style={{ width: 96, height: 64 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={node.children.map((c) => ({ name: c.name, level: computeNodeLevel(c) }))} cx="50%" cy="50%" outerRadius="60%">
+                        <PolarAngleAxis dataKey="name" tick={false} />
+                        <PolarRadiusAxis tick={false} />
+                        <Radar name="nivel" dataKey="level" stroke={colors.hex} fill={colors.hex} fillOpacity={0.18} strokeWidth={1} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+                  {!node.id.startsWith("trans-") && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOpenAddFor((prev) => prev === node.id ? null : node.id); setInlineName("") }}
+                      className="rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={`Agregar hijo a ${node.name}`}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  )}
+                  {/* parent-level split button removed — distribution now on transition node itself */}
+
+                  {/* If this node is a transition node itself, show a direct distribute button next to it (more intuitive) */}
+                  {node.id.startsWith("trans-") && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOpenSplitFor(node.id); setAllocations({}) }}
+                      title="Abrir panel de reparto"
+                      className="ml-1 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground border border-border hover:text-foreground"
+                    >
+                      Repartir
+                    </button>
+                  )}
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemoveNode(node.id) }}
                   className="rounded-md p-1 text-muted-foreground hover:text-destructive transition-colors"
@@ -444,6 +543,111 @@ function DrillDownView({
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
+                {openAddFor === node.id && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nombre del hijo"
+                      value={inlineName}
+                      onChange={(e) => setInlineName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { if (inlineName.trim()) { onAddNode(node.id, inlineName.trim()); setInlineName(''); setOpenAddFor(null) } } }}
+                      className="flex-1 rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (!inlineName.trim()) return; onAddNode(node.id, inlineName.trim()); setInlineName(''); setOpenAddFor(null) }}
+                      className="rounded-lg bg-neon-cyan/15 px-3 py-1 font-mono text-xs font-semibold text-neon-cyan neon-border hover:bg-neon-cyan/25"
+                    >Agregar</button>
+                    <button onClick={(e) => { e.stopPropagation(); setOpenAddFor(null); setInlineName('') }} className="rounded-md p-1 text-muted-foreground hover:text-foreground"> <X className="h-4 w-4" /> </button>
+                  </div>
+                )}
+                {/* Split (distribute) panel — rendered when openSplitFor targets this node (either parent or trans node) */}
+                {openSplitFor === node.id && (() => {
+                  // Determine context: if this node is a trans node, find its parent and targets
+                  let panelParent: SkillNode | null = null
+                  let transXp = 0
+                  let targets: SkillNode[] = []
+
+                  if (node.id.startsWith("trans-")) {
+                    // node is transition child; parent is node.parentId
+                    const parent = findNode(category.children, node.parentId ?? "")
+                    if (!parent) return null
+                    panelParent = parent
+                    transXp = node.xpCurrent
+                    targets = parent.children.filter((c) => !c.id.startsWith("trans-"))
+                  } else {
+                    // node is parent: use existing logic
+                    panelParent = node
+                    const trans = node.children.find((c) => c.id.startsWith("trans-") || /general/i.test(c.name))
+                    transXp = trans ? trans.xpCurrent : 0
+                    targets = node.children.filter((c) => !c.id.startsWith("trans-"))
+                  }
+
+                  const totalAllocated = Object.values(allocations).reduce((s, v) => s + (v || 0), 0)
+                  const remaining = Math.max(0, transXp - totalAllocated)
+
+                  return (
+                    <div className="mt-2 rounded-lg border border-border bg-surface-2 p-3">
+                      <p className="mb-2 font-mono text-[10px] text-muted-foreground">Repartir XP heredado ({transXp} XP) — Restante: {remaining} XP</p>
+                      <div className="flex flex-col gap-3">
+                        {targets.map((child) => (
+                          <div key={child.id} className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                              <div className="font-mono text-[12px]">{child.name}</div>
+                              <div className="font-mono text-[12px]">{allocations[child.id] ?? 0} XP</div>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={transXp}
+                              value={allocations[child.id] ?? 0}
+                              onChange={(e) => {
+                                  const v = Number(e.target.value)
+                                  setAllocations((prev) => {
+                                    const otherSum = Object.entries(prev).reduce((s, [k, val]) => k === child.id ? s : s + (val || 0), 0)
+                                    let newV = v
+                                    const excess = otherSum + v - transXp
+                                    if (excess > 0) newV = Math.max(0, v - excess)
+                                    return { ...prev, [child.id]: newV }
+                                  })
+                                }}
+                              className="w-full"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!panelParent) return
+                            // compute equal split
+                            const tx = transXp
+                            const tcount = targets.length
+                            if (tcount === 0) return
+                            const base = Math.floor(tx / tcount)
+                            const rem = tx % tcount
+                            const newAll: Record<string, number> = {}
+                            targets.forEach((c, i) => { newAll[c.id] = base + (i === 0 ? rem : 0) })
+                            setAllocations(newAll)
+                          }}
+                          className="rounded-lg bg-neon-cyan/10 px-3 py-1 font-mono text-xs font-semibold text-foreground border border-border hover:bg-neon-cyan/15"
+                        >Repartir equitativo</button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!panelParent) return
+                            const allocs = Object.entries(allocations).map(([nodeId, xp]) => ({ nodeId, xp }))
+                            onDistribute(panelParent.id, allocs)
+                            setOpenSplitFor(null); setAllocations({})
+                          }}
+                          className="rounded-lg bg-neon-cyan/15 px-3 py-1 font-mono text-xs font-semibold text-neon-cyan neon-border hover:bg-neon-cyan/25"
+                        >Aplicar</button>
+                        <button onClick={(e) => { e.stopPropagation(); setOpenSplitFor(null); setAllocations({}) }} className="rounded-md px-3 py-1 border border-border text-muted-foreground">Cancelar</button>
+                      </div>
+                    </div>
+                  )
+                })()}
             </div>
           )
         })}

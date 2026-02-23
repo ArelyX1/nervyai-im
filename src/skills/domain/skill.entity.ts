@@ -14,6 +14,8 @@
  * ============================================
  */
 
+import { generateUUID } from "@/src/tasks/domain/task.entity"
+
 /** Recursive skill tree node - supports N levels of depth */
 export interface SkillNode {
   readonly id: string
@@ -111,7 +113,7 @@ export function createSkillNode(
   parentId: string | null = null,
 ): SkillNode {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name,
     level: 0,
     xpRequired: 1000,
@@ -128,7 +130,7 @@ export function createSkillCategory(
   color: string = "hsl(185, 100%, 50%)",
 ): SkillCategory {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID()  ,
     name,
     icon,
     color,

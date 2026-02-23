@@ -63,7 +63,7 @@ export interface Task {
 /** Create a new task with defaults */
 export function createTask(partial: Partial<Task> & Pick<Task, "title" | "skillCategoryId">): Task {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     description: "",
     frequency: "daily",
     priority: "medium",
@@ -88,3 +88,17 @@ export function calculateXpWithStreak(task: Task): number {
   const streakMultiplier = 1 + Math.min(task.streak * 0.05, 0.5) // Max 50% bonus
   return Math.round(task.xpReward * streakMultiplier)
 }
+
+
+// utils/uuid.ts
+export const generateUUID = () => {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  // Fallback manual simple si crypto no está disponible
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};

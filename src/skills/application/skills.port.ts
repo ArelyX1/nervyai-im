@@ -23,4 +23,8 @@ export interface SkillsPort {
   addSkillNode(categoryId: string, parentNodeId: string | null, name: string): SkillRadarData
   removeSkillNode(categoryId: string, nodeId: string): SkillRadarData
   updateNodeXp(categoryId: string, nodeId: string, xpGained: number): SkillRadarData
+  // Distribute XP from a transition node into its sibling children
+  distributeTransitionXp(categoryId: string, parentNodeId: string, allocations: { nodeId: string; xp: number }[]): SkillRadarData
+  // Distribute all XP from transition child equally among sibling children
+  distributeTransitionEqually(categoryId: string, parentNodeId: string | null): SkillRadarData
 }

@@ -22,6 +22,8 @@ import {
   createSkillNode,
 } from "@/src/skills/domain/skill.entity"
 
+// (no extra imports)
+
 // ─── SEED DATA (6 default categories with recursive children) ────
 
 function seed(): SkillCategory[] {
@@ -115,6 +117,33 @@ function insertChild(nodes: SkillNode[], parentId: string | null, newNode: Skill
   })
 }
 
+/** Find a node by ID in this file (simple utility) */
+function findNodeInTree(nodes: SkillNode[], id: string): SkillNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children.length > 0) {
+      const found = findNodeInTree(n.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** Set xpCurrent to 0 on a node (used when turning a leaf into parent with children)
+ * returns a new tree with the change applied
+ */
+function zeroXpInTree(nodes: SkillNode[], nodeId: string): SkillNode[] {
+  return nodes.map((n) => {
+    if (n.id === nodeId) {
+      return { ...n, xpCurrent: 0 }
+    }
+    if (n.children.length > 0) {
+      return { ...n, children: zeroXpInTree(n.children, nodeId) }
+    }
+    return n
+  })
+}
+
 /** Remove a node by ID from the tree */
 function removeById(nodes: SkillNode[], nodeId: string): SkillNode[] {
   return nodes
@@ -184,6 +213,38 @@ export function createSkillsMemoryAdapter(): SkillsPort {
       const newNode = createSkillNode(name, parentNodeId)
       categories = categories.map((cat) => {
         if (cat.id !== categoryId) return cat
+
+        // If adding under a transition node, redirect to its parent (transition nodes are internal)
+        if (parentNodeId) {
+          const parentNode = findNodeInTree(cat.children, parentNodeId)
+          if (parentNode && parentNode.id.startsWith("trans-")) {
+            parentNodeId = parentNode.parentId
+          }
+        }
+
+        // If parent exists and is currently a leaf with XP, move its XP into a new "General" transition child
+        if (parentNodeId) {
+          const parentNode = findNodeInTree(cat.children, parentNodeId)
+          if (parentNode && parentNode.children.length === 0 && parentNode.xpCurrent > 0) {
+            const tmp = createSkillNode("General", parentNodeId)
+            const transNode: SkillNode = {
+              ...tmp,
+              id: `trans-${tmp.id}`,
+              name: `${parentNode.name} — General`,
+              xpRequired: parentNode.xpRequired,
+              xpCurrent: parentNode.xpCurrent,
+              parentId: parentNodeId,
+              children: [],
+            }
+
+            // zero parent's xp, insert transition node, then insert the requested new node
+            let newChildren = zeroXpInTree(cat.children, parentNodeId)
+            newChildren = insertChild(newChildren, parentNodeId, transNode)
+            newChildren = insertChild(newChildren, parentNodeId, newNode)
+            return { ...cat, children: newChildren }
+          }
+        }
+
         return { ...cat, children: insertChild(cat.children, parentNodeId, newNode) }
       })
       categories = recalculate(categories)
@@ -204,6 +265,106 @@ export function createSkillsMemoryAdapter(): SkillsPort {
         if (cat.id !== categoryId) return cat
         return { ...cat, children: updateXpInTree(cat.children, nodeId, xpGained) }
       })
+      categories = recalculate(categories)
+      return snapshot()
+    },
+
+    // Distribute XP taken from a transition node into sibling children
+    distributeTransitionXp(categoryId, parentNodeId, allocations) {
+      categories = categories.map((cat) => {
+        if (cat.id !== categoryId) return cat
+
+        function applyAlloc(nodes: SkillNode[]): SkillNode[] {
+          return nodes.map((n) => {
+            if (n.id === parentNodeId) {
+              // find transition child
+              const trans = n.children.find((c) => c.id.startsWith("trans-") || /general/i.test(c.name))
+              const transXp = trans ? trans.xpCurrent : 0
+
+              // apply allocations to children
+              const totalAllocated = allocations.reduce((s, a) => s + a.xp, 0)
+              const updatedChildren = n.children.map((c) => {
+                if (c.id.startsWith("trans-")) return { ...c, xpCurrent: Math.max(0, transXp - totalAllocated) }
+                const alloc = allocations.find((a) => a.nodeId === c.id)
+                if (!alloc) return c
+                const newXp = Math.min(c.xpRequired, c.xpCurrent + alloc.xp)
+                return { ...c, xpCurrent: newXp, level: Math.round((newXp / c.xpRequired) * 100) }
+              })
+
+              return { ...n, children: updatedChildren }
+            }
+            if (n.children.length > 0) return { ...n, children: applyAlloc(n.children) }
+            return n
+          })
+        }
+
+        return { ...cat, children: applyAlloc(cat.children) }
+      })
+      categories = recalculate(categories)
+      return snapshot()
+    },
+
+    // Distribute all XP from transition child equally among non-transition children.
+    distributeTransitionEqually(categoryId, parentNodeId) {
+      categories = categories.map((cat) => {
+        if (cat.id !== categoryId) return cat
+
+        // Helper for non-root parents
+        function applyEqual(nodes: SkillNode[]): SkillNode[] {
+          return nodes.map((n) => {
+            if (n.id === parentNodeId) {
+              const trans = n.children.find((c) => c.id.startsWith("trans-") || /general/i.test(c.name))
+              const transXp = trans ? trans.xpCurrent : 0
+
+              const targets = n.children.filter((c) => !c.id.startsWith("trans-"))
+              if (targets.length === 0) return n
+
+              const base = Math.floor(transXp / targets.length)
+              const remainder = transXp % targets.length
+
+              let first = true
+              const updatedChildren = n.children.map((c) => {
+                if (c.id.startsWith("trans-")) {
+                  return { ...c, xpCurrent: 0 }
+                }
+                const extra = first ? remainder : 0
+                first = false
+                const alloc = base + extra
+                const newXp = Math.min(c.xpRequired, c.xpCurrent + alloc)
+                return { ...c, xpCurrent: newXp, level: Math.round((newXp / c.xpRequired) * 100) }
+              })
+
+              return { ...n, children: updatedChildren }
+            }
+            if (n.children.length > 0) return { ...n, children: applyEqual(n.children) }
+            return n
+          })
+        }
+
+        // If parentNodeId is null, operate at category root
+        if (parentNodeId === null) {
+          const trans = cat.children.find((c) => c.id.startsWith("trans-") || /general/i.test(c.name))
+          const transXp = trans ? trans.xpCurrent : 0
+          const targets = cat.children.filter((c) => !c.id.startsWith("trans-"))
+          if (targets.length === 0) return cat
+
+          const base = Math.floor(transXp / targets.length)
+          const remainder = transXp % targets.length
+          let first = true
+          const updated = cat.children.map((c) => {
+            if (c.id.startsWith("trans-")) return { ...c, xpCurrent: 0 }
+            const extra = first ? remainder : 0
+            first = false
+            const alloc = base + extra
+            const newXp = Math.min(c.xpRequired, c.xpCurrent + alloc)
+            return { ...c, xpCurrent: newXp, level: Math.round((newXp / c.xpRequired) * 100) }
+          })
+          return { ...cat, children: updated }
+        }
+
+        return { ...cat, children: applyEqual(cat.children) }
+      })
+
       categories = recalculate(categories)
       return snapshot()
     },

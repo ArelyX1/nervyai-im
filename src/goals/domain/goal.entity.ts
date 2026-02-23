@@ -13,6 +13,8 @@
  * ============================================
  */
 
+import { generateUUID } from "@/src/tasks/domain/task.entity"
+
 /** Single daily check-in for a goal */
 export interface DailyEntry {
   readonly date: string      // YYYY-MM-DD
@@ -100,7 +102,7 @@ export function createGoal(
   partial: Partial<Goal> & Pick<Goal, "title" | "targetDays" | "categoryId">
 ): Goal {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     description: "",
     dailyAction: "",
     entries: [],
