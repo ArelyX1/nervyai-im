@@ -33,6 +33,8 @@ export interface Goal {
   readonly dailyAction: string      // "Hacer 30 min de ejercicio"
   readonly targetDays: number       // e.g. 30 days
   readonly categoryId: string       // dynamic - matches any SkillCategory id
+  readonly subSkillId?: string      // optional specific sub-skill to award XP to
+  readonly xpPerDay?: number        // XP awarded per completed daily entry
   readonly entries: DailyEntry[]
   readonly createdAt: string        // ISO
   readonly status: GoalStatus
@@ -108,6 +110,7 @@ export function createGoal(
     entries: [],
     createdAt: new Date().toISOString(),
     status: "active",
+    xpPerDay: 15,
     ...partial,
   }
 }

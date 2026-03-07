@@ -19,4 +19,6 @@ export interface GoalsPort {
 
   /** Toggle a daily entry for a goal on a given date */
   logDailyProgress(goalId: string, date: string, note?: string): Goal | undefined
+  // Reset goals (clear entries and restore seed-less state)
+  resetGoals(): Goal[]
 }

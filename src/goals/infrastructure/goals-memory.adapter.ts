@@ -35,40 +35,7 @@ function generatePastEntries(daysBack: number, completedCount: number): DailyEnt
   return entries
 }
 
-const SEED_GOALS: Goal[] = [
-  createGoal({
-    title: "Dominar Algoritmos",
-    description: "Resolver un problema de algoritmos cada dia",
-    dailyAction: "Resolver 1 problema en LeetCode",
-    targetDays: 50,
-    categoryId: "intellect",
-    entries: generatePastEntries(40, 32),
-  }),
-  createGoal({
-    title: "Racha de Ejercicio",
-    description: "Entrenar 30 dias consecutivos",
-    dailyAction: "Entrenar minimo 30 minutos",
-    targetDays: 30,
-    categoryId: "wellness",
-    entries: generatePastEntries(25, 18),
-  }),
-  createGoal({
-    title: "Leer Cada Dia",
-    description: "Leer al menos 20 paginas diarias",
-    dailyAction: "Leer 20 paginas de un libro",
-    targetDays: 60,
-    categoryId: "humanities",
-    entries: generatePastEntries(15, 10),
-  }),
-  createGoal({
-    title: "Portfolio Creativo",
-    description: "Crear una pieza de arte digital cada dia",
-    dailyAction: "Crear 1 pieza de arte/diseno",
-    targetDays: 30,
-    categoryId: "creativity",
-    entries: generatePastEntries(12, 8),
-  }),
-]
+const SEED_GOALS: Goal[] = []
 
 // ─── ADAPTER FACTORY ───────────────────────────
 
@@ -77,6 +44,12 @@ export function createGoalsMemoryAdapter(): GoalsPort {
 
   return {
     getAllGoals: () => [...goals],
+
+    /** Replace in-memory goals with loaded data (sync after login/fetch) */
+    loadGoals(newGoals: Goal[]) {
+      goals = Array.isArray(newGoals) ? [...newGoals] : []
+      return [...goals]
+    },
 
     getGoalById: (id) => goals.find((g) => g.id === id),
 
@@ -121,6 +94,12 @@ export function createGoalsMemoryAdapter(): GoalsPort {
 
       goals[idx] = { ...goal, entries: newEntries }
       return goals[idx]
+    },
+
+    // Reset goals to empty list
+    resetGoals() {
+      goals = []
+      return [...goals]
     },
   }
 }

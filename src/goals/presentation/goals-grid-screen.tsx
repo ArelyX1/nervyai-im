@@ -17,6 +17,8 @@
 
 import { useState } from "react"
 import { useApp } from "@/src/shared/presentation/app-context"
+import type { SkillRadarData } from "@/src/skills/domain/skill.entity"
+import { findNode as findSkillNode } from "@/src/skills/domain/skill.entity"
 import { NeonCard } from "@/src/shared/presentation/components/neon-card"
 import { getCategoryColor } from "@/src/shared/presentation/category-colors"
 import {
@@ -63,7 +65,7 @@ export function GoalsGridScreen() {
 
       {showForm && (
         <AddGoalForm
-          categories={skills.categories.map((c) => ({ id: c.id, label: c.name }))}
+          skills={skills}
           onSubmit={(data) => {
             addGoal(data)
             setShowForm(false)
@@ -174,24 +176,29 @@ export function GoalsGridScreen() {
 // ─── ADD GOAL FORM ─────────────────────────────
 
 function AddGoalForm({
-  categories,
+  skills,
   onSubmit,
   onCancel,
 }: {
-  categories: { id: string; label: string }[]
-  onSubmit: (data: { title: string; description: string; dailyAction: string; targetDays: number; categoryId: string }) => void
+  skills: SkillRadarData
+  onSubmit: (data: { title: string; description: string; dailyAction: string; targetDays: number; categoryId: string; subSkillId?: string; xpPerDay?: number }) => void
   onCancel: () => void
 }) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [dailyAction, setDailyAction] = useState("")
   const [targetDays, setTargetDays] = useState(30)
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "")
+  const [categoryId, setCategoryId] = useState(skills.categories[0]?.id ?? "")
+  const [selectedPath, setSelectedPath] = useState<string[]>([])
+  const [xpPerDay, setXpPerDay] = useState<number>(15)
+
+  // last selected node id (leaf) if any
+  const subSkillId = selectedPath[selectedPath.length - 1]
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
-    onSubmit({ title, description, dailyAction, targetDays, categoryId })
+    onSubmit({ title, description, dailyAction, targetDays, categoryId, subSkillId, xpPerDay })
   }
 
   return (
@@ -242,14 +249,75 @@ function AddGoalForm({
             </label>
             <select
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => { setCategoryId(e.target.value); setSelectedPath([]) }}
               className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-neon-cyan"
             >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.label}</option>
+              {skills.categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-mono text-[10px] text-muted-foreground">Subarea (opcional)</label>
+          <div className="flex flex-col gap-2">
+            {/* Level 0 nodes */}
+            <select
+              value={selectedPath[0] ?? ""}
+              onChange={(e) => {
+                const v = e.target.value
+                if (!v) {
+                  setSelectedPath([])
+                } else {
+                  setSelectedPath([v])
+                }
+              }}
+              className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground"
+            >
+              <option value="">(Cualquiera en la categoria)</option>
+              {(skills.categories.find((c) => c.id === categoryId)?.children ?? []).map((n) => (
+                <option key={n.id} value={n.id}>{n.name}</option>
+              ))}
+            </select>
+
+            {/* Render cascading selects for deeper levels */}
+            {selectedPath.map((nodeId, level) => {
+              const parentNode = findSkillNode(skills.categories.find((c) => c.id === categoryId)?.children ?? [], nodeId)
+              const children = parentNode?.children ?? []
+              if (!children || children.length === 0) return null
+              const nextValue = selectedPath[level + 1] ?? ""
+              return (
+                <select
+                  key={level}
+                  value={nextValue}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (!v) {
+                      setSelectedPath((prev) => prev.slice(0, level + 1))
+                    } else {
+                      setSelectedPath((prev) => {
+                        const next = prev.slice(0, level + 1)
+                        next[level + 1] = v
+                        return next
+                      })
+                    }
+                  }}
+                  className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground"
+                >
+                  <option value="">(Ninguna subarea)</option>
+                  {children.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-mono text-[10px] text-muted-foreground">XP por dia</label>
+          <input type="number" min={1} value={xpPerDay} onChange={(e) => setXpPerDay(Number(e.target.value || 0))} className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground" />
         </div>
 
         <div className="flex gap-2">

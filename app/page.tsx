@@ -188,6 +188,89 @@ function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
           {loading ? '...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
         </button>
       </div>
+
+      <ClearDataButton />
+    </div>
+  )
+}
+
+const SECURITY_CODE = "369"
+
+function ClearDataButton() {
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [code, setCode] = useState("")
+  const [codeError, setCodeError] = useState<string | null>(null)
+
+  const handleClear = () => {
+    setCodeError(null)
+    if (code !== SECURITY_CODE) {
+      setCodeError("Código incorrecto")
+      return
+    }
+    if (typeof window === "undefined") return
+    // Borrar estado de la app
+    localStorage.removeItem("nervyai-app-state")
+    localStorage.removeItem("accountId")
+    localStorage.removeItem("accountPin")
+    localStorage.removeItem("backendUrl")
+    localStorage.removeItem("useBackend")
+    // Borrar cuentas locales
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith("local_account_")) keysToRemove.push(key)
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k))
+    setShowConfirm(false)
+    setCode("")
+    window.location.reload()
+  }
+
+  if (!showConfirm) {
+    return (
+      <button
+        type="button"
+        onClick={() => setShowConfirm(true)}
+        className="mt-2 font-mono text-[10px] text-muted-foreground hover:text-red-400 transition-colors underline"
+      >
+        Limpiar JSON (borrar todos los datos guardados)
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border">
+      <p className="font-mono text-[10px] text-muted-foreground mb-2">
+        Código de seguridad para borrar todos los datos:
+      </p>
+      <input
+        type="password"
+        inputMode="numeric"
+        value={code}
+        onChange={(e) => { setCode(e.target.value); setCodeError(null) }}
+        placeholder="Código"
+        maxLength={6}
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm mb-2"
+      />
+      {codeError && (
+        <p className="font-mono text-xs text-red-400 mb-2">{codeError}</p>
+      )}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleClear}
+          className="flex-1 rounded-lg bg-red-500/20 py-2 font-mono text-xs text-red-400 border border-red-500/40"
+        >
+          Borrar todo
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowConfirm(false); setCode(""); setCodeError(null) }}
+          className="rounded-lg bg-surface-3 py-2 px-3 font-mono text-xs text-muted-foreground"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   )
 }

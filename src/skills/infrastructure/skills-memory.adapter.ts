@@ -32,70 +32,70 @@ function seed(): SkillCategory[] {
       ...createSkillCategory("Intelecto & Ciencia", "Brain", "hsl(185, 100%, 50%)"),
       id: "intellect",
       children: [
-        { id: "physics", name: "Fisica", level: 15, xpRequired: 1000, xpCurrent: 150, children: [], parentId: null },
-        { id: "math", name: "Matematicas", level: 22, xpRequired: 1000, xpCurrent: 220, children: [], parentId: null },
+        { id: "physics", name: "Fisica", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "math", name: "Matematicas", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
         {
-          id: "programming", name: "Programacion", level: 45, xpRequired: 1000, xpCurrent: 450, parentId: null,
+          id: "programming", name: "Programacion", level: 0, xpRequired: 1000, xpCurrent: 0, parentId: null,
           children: [
-            { id: "frontend", name: "Frontend", level: 50, xpRequired: 1000, xpCurrent: 500, children: [], parentId: "programming" },
-            { id: "backend", name: "Backend", level: 35, xpRequired: 1000, xpCurrent: 350, children: [], parentId: "programming" },
-            { id: "devops", name: "DevOps", level: 20, xpRequired: 1000, xpCurrent: 200, children: [], parentId: "programming" },
+            { id: "frontend", name: "Frontend", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: "programming" },
+            { id: "backend", name: "Backend", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: "programming" },
+            { id: "devops", name: "DevOps", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: "programming" },
           ],
         },
-        { id: "networking", name: "Redes", level: 12, xpRequired: 1000, xpCurrent: 120, children: [], parentId: null },
-        { id: "ai", name: "IA & ML", level: 30, xpRequired: 1000, xpCurrent: 300, children: [], parentId: null },
+        { id: "networking", name: "Redes", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "ai", name: "IA & ML", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
       ],
     },
     {
       ...createSkillCategory("Bienestar & Salud", "Heart", "hsl(300, 100%, 50%)"),
       id: "wellness",
       children: [
-        { id: "health", name: "Salud General", level: 35, xpRequired: 1000, xpCurrent: 350, children: [], parentId: null },
-        { id: "exercise", name: "Ejercicio", level: 40, xpRequired: 1000, xpCurrent: 400, children: [], parentId: null },
-        { id: "nutrition", name: "Nutricion", level: 28, xpRequired: 1000, xpCurrent: 280, children: [], parentId: null },
-        { id: "meditation", name: "Meditacion", level: 18, xpRequired: 1000, xpCurrent: 180, children: [], parentId: null },
-        { id: "sleep", name: "Sueno", level: 50, xpRequired: 1000, xpCurrent: 500, children: [], parentId: null },
+        { id: "health", name: "Salud General", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "exercise", name: "Ejercicio", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "nutrition", name: "Nutricion", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "meditation", name: "Meditacion", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "sleep", name: "Sueno", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
       ],
     },
     {
       ...createSkillCategory("Humanidades & Sociedad", "BookOpen", "hsl(82, 100%, 55%)"),
       id: "humanities",
       children: [
-        { id: "sociology", name: "Sociologia", level: 10, xpRequired: 1000, xpCurrent: 100, children: [], parentId: null },
-        { id: "history", name: "Historia", level: 20, xpRequired: 1000, xpCurrent: 200, children: [], parentId: null },
-        { id: "philosophy", name: "Filosofia", level: 25, xpRequired: 1000, xpCurrent: 250, children: [], parentId: null },
-        { id: "languages", name: "Bilingue", level: 35, xpRequired: 1000, xpCurrent: 350, children: [], parentId: null },
-        { id: "communication", name: "Comunicacion", level: 30, xpRequired: 1000, xpCurrent: 300, children: [], parentId: null },
+        { id: "sociology", name: "Sociologia", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "history", name: "Historia", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "philosophy", name: "Filosofia", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "languages", name: "Bilingue", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "communication", name: "Comunicacion", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
       ],
     },
     {
       ...createSkillCategory("Creatividad & Arte", "Palette", "hsl(35, 100%, 55%)"),
       id: "creativity",
       children: [
-        { id: "visual-art", name: "Arte Visual", level: 18, xpRequired: 1000, xpCurrent: 180, children: [], parentId: null },
-        { id: "music", name: "Musica", level: 22, xpRequired: 1000, xpCurrent: 220, children: [], parentId: null },
-        { id: "design", name: "Diseno", level: 38, xpRequired: 1000, xpCurrent: 380, children: [], parentId: null },
-        { id: "writing", name: "Escritura", level: 28, xpRequired: 1000, xpCurrent: 280, children: [], parentId: null },
+        { id: "visual-art", name: "Arte Visual", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "music", name: "Musica", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "design", name: "Diseno", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "writing", name: "Escritura", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
       ],
     },
     {
       ...createSkillCategory("Desarrollo Personal", "Target", "hsl(55, 100%, 55%)"),
       id: "personal",
       children: [
-        { id: "responsibility", name: "Responsabilidad", level: 42, xpRequired: 1000, xpCurrent: 420, children: [], parentId: null },
-        { id: "discipline", name: "Disciplina", level: 35, xpRequired: 1000, xpCurrent: 350, children: [], parentId: null },
-        { id: "productivity", name: "Productividad", level: 38, xpRequired: 1000, xpCurrent: 380, children: [], parentId: null },
-        { id: "leadership", name: "Liderazgo", level: 20, xpRequired: 1000, xpCurrent: 200, children: [], parentId: null },
+        { id: "responsibility", name: "Responsabilidad", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "discipline", name: "Disciplina", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "productivity", name: "Productividad", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "leadership", name: "Liderazgo", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
       ],
     },
     {
       ...createSkillCategory("Finanzas & Exito", "TrendingUp", "hsl(220, 100%, 60%)"),
       id: "finance",
       children: [
-        { id: "savings", name: "Ahorro", level: 30, xpRequired: 1000, xpCurrent: 300, children: [], parentId: null },
-        { id: "investments", name: "Inversiones", level: 15, xpRequired: 1000, xpCurrent: 150, children: [], parentId: null },
-        { id: "business", name: "Negocios", level: 20, xpRequired: 1000, xpCurrent: 200, children: [], parentId: null },
-        { id: "income", name: "Ingresos", level: 25, xpRequired: 1000, xpCurrent: 250, children: [], parentId: null },
+        { id: "savings", name: "Ahorro", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "investments", name: "Inversiones", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "business", name: "Negocios", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
+        { id: "income", name: "Ingresos", level: 0, xpRequired: 1000, xpCurrent: 0, children: [], parentId: null },
       ],
     },
   ]
@@ -177,6 +177,16 @@ function recalculate(categories: SkillCategory[]): SkillCategory[] {
   }))
 }
 
+/** Zero out xpCurrent and level for all nodes in a tree */
+function zeroAllXpInTree(nodes: SkillNode[]): SkillNode[] {
+  return nodes.map((n) => ({
+    ...n,
+    xpCurrent: 0,
+    level: 0,
+    children: n.children.length > 0 ? zeroAllXpInTree(n.children) : [],
+  }))
+}
+
 // ─── ADAPTER FACTORY ───────────────────────────
 
 export function createSkillsMemoryAdapter(): SkillsPort {
@@ -188,6 +198,14 @@ export function createSkillsMemoryAdapter(): SkillsPort {
 
   return {
     getSkillRadar: () => snapshot(),
+
+    /** Replace in-memory state with loaded data (sync after login/fetch) */
+    loadSkillRadar(data: SkillRadarData) {
+      if (data?.categories && Array.isArray(data.categories)) {
+        categories = recalculate(JSON.parse(JSON.stringify(data.categories)))
+      }
+      return snapshot()
+    },
 
     getCategory: (id) => categories.find((c) => c.id === id),
 
@@ -365,6 +383,13 @@ export function createSkillsMemoryAdapter(): SkillsPort {
         return { ...cat, children: applyEqual(cat.children) }
       })
 
+      categories = recalculate(categories)
+      return snapshot()
+    },
+
+    // Reset all progress in all categories (set xpCurrent and level to 0)
+    resetProgress() {
+      categories = categories.map((c) => ({ ...c, children: zeroAllXpInTree(c.children) }))
       categories = recalculate(categories)
       return snapshot()
     },

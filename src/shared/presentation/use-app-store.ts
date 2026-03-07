@@ -14,7 +14,7 @@
 
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { skillsAdapter, tasksAdapter, goalsAdapter } from "@/src/shared/infrastructure/container"
 import type { SkillRadarData, SkillCategory } from "@/src/skills/domain/skill.entity"
 import { findNode } from "@/src/skills/domain/skill.entity"
@@ -100,6 +100,8 @@ export function useAppStore(): AppStore {
   const [user, setUser] = useState<UserProfile>(createDefaultUser())
   const [settings, setSettings] = useState<UserSettings>(createDefaultSettings())
   const [accountId, setAccountId] = useState<string | null>(null)
+  const stateRef = useRef({ skills, tasks, goals, user, settings })
+  stateRef.current = { skills, tasks, goals, user, settings }
 
   function saveToStorage(state: { skills: SkillRadarData; tasks: Task[]; goals: Goal[]; user: UserProfile; settings: UserSettings }) {
     if (typeof window === "undefined") return
@@ -167,10 +169,10 @@ export function useAppStore(): AppStore {
     }
   }
 
-    // Exposed immediate save helper for UI buttons
+    // Exposed immediate save helper — use current React state so saved data is correct
     async function saveNow() {
       try {
-        const state = { skills: skillsAdapter.getSkillRadar(), tasks: tasksAdapter.getAllTasks(), goals: goalsAdapter.getAllGoals(), user, settings }
+        const state = stateRef.current
         if (useBackendEnabled()) await saveToServer(state)
         try { saveToStorage(state) } catch (_) {}
       } catch (e) {
@@ -199,11 +201,20 @@ export function useAppStore(): AppStore {
         const json = await res.json()
         console.debug('[CLIENT] loginAccount response', json)
         if (json && json.ok) {
-          // apply returned state if present
+          // apply returned state and sync to adapters so save/refresh use correct data
           if (json.state) {
-            if (json.state.skills) setSkills(json.state.skills)
-            if (json.state.tasks) setTasks(json.state.tasks)
-            if (json.state.goals) setGoals(json.state.goals)
+            if (json.state.skills) {
+              setSkills(json.state.skills)
+              ;(skillsAdapter as any).loadSkillRadar?.(json.state.skills)
+            }
+            if (json.state.tasks) {
+              setTasks(json.state.tasks)
+              ;(tasksAdapter as any).loadTasks?.(json.state.tasks)
+            }
+            if (json.state.goals) {
+              setGoals(json.state.goals)
+              ;(goalsAdapter as any).loadGoals?.(json.state.goals)
+            }
             if (json.state.user) setUser(json.state.user)
             if (json.state.settings) setSettings(json.state.settings)
             try { saveToStorage(json.state) } catch (_) {}
@@ -251,12 +262,35 @@ export function useAppStore(): AppStore {
   useEffect(() => {
     let mounted = true
     async function hydrate() {
+      if (typeof window !== 'undefined') {
+        const acct = localStorage.getItem('accountId')
+        if (acct === 'simuser') {
+          localStorage.removeItem('accountId')
+          localStorage.removeItem('accountPin')
+          localStorage.removeItem('nervyai-app-state')
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i)
+            if (key?.startsWith('local_account_')) localStorage.removeItem(key)
+          }
+          setAccountId(null)
+          return
+        }
+      }
       if (useBackendEnabled()) {
         const json = await fetchFromServer()
         if (!json || !mounted) return
-        if (json.skills) setSkills(json.skills)
-        if (json.tasks) setTasks(json.tasks)
-        if (json.goals) setGoals(json.goals)
+        if (json.skills) {
+          setSkills(json.skills)
+          ;(skillsAdapter as any).loadSkillRadar?.(json.skills)
+        }
+        if (json.tasks) {
+          setTasks(json.tasks)
+          ;(tasksAdapter as any).loadTasks?.(json.tasks)
+        }
+        if (json.goals) {
+          setGoals(json.goals)
+          ;(goalsAdapter as any).loadGoals?.(json.goals)
+        }
         if (json.user) setUser(json.user)
         if (json.settings) setSettings(json.settings)
         try { saveToStorage(json) } catch (_) {}
@@ -267,15 +301,24 @@ export function useAppStore(): AppStore {
       try {
         const raw = loadFromStorage()
         if (!raw || !mounted) return
-        if (raw.skills) setSkills(raw.skills)
-        if (raw.tasks) setTasks(raw.tasks)
-        if (raw.goals) setGoals(raw.goals)
+        if (raw.skills) {
+          setSkills(raw.skills)
+          ;(skillsAdapter as any).loadSkillRadar?.(raw.skills)
+        }
+        if (raw.tasks) {
+          setTasks(raw.tasks)
+          ;(tasksAdapter as any).loadTasks?.(raw.tasks)
+        }
+        if (raw.goals) {
+          setGoals(raw.goals)
+          ;(goalsAdapter as any).loadGoals?.(raw.goals)
+        }
         if (raw.user) setUser(raw.user)
         if (raw.settings) setSettings(raw.settings)
-        // restore last logged account if any
+        // restore last logged account if any (skip simuser - invalid)
         if (typeof window !== 'undefined') {
           const acct = localStorage.getItem('accountId')
-          if (acct) setAccountId(acct)
+          if (acct && acct !== 'simuser') setAccountId(acct)
         }
         // If there's a local account saved (backend disabled), load it
         if (typeof window !== 'undefined') {
@@ -287,9 +330,18 @@ export function useAppStore(): AppStore {
               if (rawAcct) {
                 const parsed = JSON.parse(rawAcct)
                 if (parsed.state) {
-                  if (parsed.state.skills) setSkills(parsed.state.skills)
-                  if (parsed.state.tasks) setTasks(parsed.state.tasks)
-                  if (parsed.state.goals) setGoals(parsed.state.goals)
+                  if (parsed.state.skills) {
+                    setSkills(parsed.state.skills)
+                    ;(skillsAdapter as any).loadSkillRadar?.(parsed.state.skills)
+                  }
+                  if (parsed.state.tasks) {
+                    setTasks(parsed.state.tasks)
+                    ;(tasksAdapter as any).loadTasks?.(parsed.state.tasks)
+                  }
+                  if (parsed.state.goals) {
+                    setGoals(parsed.state.goals)
+                    ;(goalsAdapter as any).loadGoals?.(parsed.state.goals)
+                  }
                   if (parsed.state.user) setUser(parsed.state.user)
                   if (parsed.state.settings) setSettings(parsed.state.settings)
                 }
@@ -312,7 +364,7 @@ export function useAppStore(): AppStore {
       try {
         if (typeof window !== 'undefined' && (localStorage.getItem('backendUrl') || localStorage.getItem('useBackend') === 'true')) {
           autosaveTimer = setInterval(() => {
-            const s = { skills: skillsAdapter.getSkillRadar(), tasks: tasksAdapter.getAllTasks(), goals: goalsAdapter.getAllGoals(), user, settings }
+            const s = stateRef.current
             saveToServer(s)
             try { saveToStorage(s) } catch (_) {}
           }, 20000) // every 20s

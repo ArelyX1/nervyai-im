@@ -27,4 +27,6 @@ export interface SkillsPort {
   distributeTransitionXp(categoryId: string, parentNodeId: string, allocations: { nodeId: string; xp: number }[]): SkillRadarData
   // Distribute all XP from transition child equally among sibling children
   distributeTransitionEqually(categoryId: string, parentNodeId: string | null): SkillRadarData
+  // Reset all progress (set xpCurrent and levels to 0 across all categories)
+  resetProgress(): SkillRadarData
 }

@@ -20,4 +20,6 @@ export interface TasksPort {
   getTasksByCategory(categoryId: string): Task[]
   getTasksByDate(date: string): Task[]
   completeTask(id: string): Task | undefined
+  // Clear all tasks (reset to empty seed-less state)
+  resetTasks(): Task[]
 }

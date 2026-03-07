@@ -48,6 +48,10 @@ app.post('/api/accounts/login', async (req, res) => {
     const existing = await dbGet('accounts', nid)
 
     if (existing) {
+      // Si eligió "Crear cuenta" pero la cuenta ya existe -> mensaje claro (antes de verificar PIN)
+      if (mode === 'create') {
+        return res.status(409).json({ ok: false, error: 'account_exists', message: 'Esa cuenta ya existe. Usa Iniciar sesión.' })
+      }
       const hash = existing.pinHash || existing.pin
       const match = hash ? bcrypt.compareSync(pin, hash) : false
       if (!match) {
@@ -59,10 +63,6 @@ app.post('/api/accounts/login', async (req, res) => {
           return res.json({ ok: true, found: false, created: true, replaced: true, state: acc.state })
         }
         return res.status(401).json({ ok: false, error: 'invalid_pin' })
-      }
-      // mode='create' but account exists -> error
-      if (mode === 'create') {
-        return res.status(409).json({ ok: false, error: 'account_exists', message: 'Esa cuenta ya existe. Inicia sesión.' })
       }
       console.log('[SERVER] /api/accounts/login -> found account, returning state')
       return res.json({ ok: true, found: true, created: false, state: existing.state || null })
@@ -108,7 +108,8 @@ app.get('/api/collections/:name', async (req, res) => {
   const c = req.params.name
   try {
     console.log('[SERVER] GET /api/collections/', c)
-    const items = await dbList(c)
+    let items = await dbList(c)
+    if (c === 'accounts') items = items.filter((i) => i && i.id !== 'simuser')
     res.json(items)
   } catch (e) {
     res.status(500).json({ error: 'failed' })
@@ -118,6 +119,7 @@ app.get('/api/collections/:name', async (req, res) => {
 app.get('/api/collections/:name/:id', async (req, res) => {
   const { name, id } = req.params
   try {
+    if (name === 'accounts' && id === 'simuser') return res.status(404).json({})
     console.log('[SERVER] GET /api/collections/', name, id)
     const item = await dbGet(name, id)
     if (!item) return res.status(404).json({})
@@ -133,6 +135,10 @@ app.post('/api/collections/:name', async (req, res) => {
   try {
     if (name === 'accounts' && item && item.id) {
       item.id = String(item.id).trim().toLowerCase()
+      if (item.id === 'simuser') {
+        await dbRemove(name, item.id)
+        return res.json({ ok: true, item: null })
+      }
     }
     console.log('[SERVER] POST /api/collections/', name, ' id=', item && item.id)
     const saved = await dbUpsert(name, item)
@@ -164,5 +170,7 @@ app.post('/api/reset', async (req, res) => {
 
 const PORT = process.env.PORT || 4001
 app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}${useMongo ? ' (MongoDB)' : ' (file-based)'}`)
+  const mode = useMongo ? 'MongoDB' : 'file-based (state.json)'
+  console.log(`Backend running on http://localhost:${PORT} [${mode}]`)
+  if (useMongo) console.log('  Tip: unset MONGODB_URI to use local file storage instead')
 })
