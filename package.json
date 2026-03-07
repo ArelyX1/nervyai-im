@@ -6,7 +6,8 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "backend": "node server/index.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -58,6 +59,12 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"
+    ,
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2",
+    "bcryptjs": "^2.4.3",
+    "mongodb": "^6.10.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",

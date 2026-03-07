@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 
 export function SettingsScreen() {
-  const { user, settings, updateUser, updateSettings } = useApp()
+  const { user, settings, updateUser, updateSettings, loginAccount, logoutAccount, accountId, resetAll, saveNow } = useApp()
   const [nickname, setNickname] = useState(user.nickname)
   const [saved, setSaved] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -111,13 +111,22 @@ export function SettingsScreen() {
             <span className="font-mono text-[10px] text-muted-foreground">XP Total</span>
             <span className="font-mono text-sm font-bold text-neon-magenta">{user.totalXp.toLocaleString()}</span>
           </div>
-          <button
-            onClick={handleSaveProfile}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-neon-cyan/15 py-2 font-mono text-xs font-semibold text-neon-cyan neon-border transition-all hover:bg-neon-cyan/25"
-          >
-            <Save className="h-3.5 w-3.5" />
-            {saved ? "Guardado!" : "Guardar Perfil"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveProfile}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-neon-cyan/15 py-2 font-mono text-xs font-semibold text-neon-cyan neon-border transition-all hover:bg-neon-cyan/25"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saved ? "Guardado!" : "Guardar Perfil"}
+            </button>
+            <button
+              onClick={async () => { await saveNow(); alert('Estado guardado en backend (si configurado)') }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-neon-magenta/10 py-2 font-mono text-xs font-semibold text-neon-magenta neon-border-magenta transition-all hover:bg-neon-magenta/20"
+            >
+              <Save className="h-3.5 w-3.5" />
+              Guardar Todo
+            </button>
+          </div>
         </div>
       </NeonCard>
 
@@ -172,6 +181,15 @@ export function SettingsScreen() {
             />
           </div>
         </div>
+      </NeonCard>
+
+      {/* Backend Sync */}
+      <NeonCard glowColor="cyan">
+        <div className="mb-3 flex items-center gap-2">
+          <Smartphone className="h-4 w-4 text-neon-cyan" />
+          <h2 className="font-mono text-sm font-semibold text-foreground">Sincronizacion</h2>
+        </div>
+        <BackendConfig />
       </NeonCard>
 
       {/* Validation */}
@@ -241,6 +259,39 @@ export function SettingsScreen() {
           <p className="font-mono text-[9px] text-muted-foreground">Powered by NervyAI</p>
         </div>
       </div>
+      {/* Account */}
+      <NeonCard glowColor="cyan">
+        <div className="mb-3 flex items-center gap-2">
+          <Smartphone className="h-4 w-4 text-neon-cyan" />
+          <h2 className="font-mono text-sm font-semibold text-foreground">Cuenta</h2>
+        </div>
+        <div className="flex flex-col gap-3">
+          {accountId ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-sm font-bold text-neon-cyan">{accountId}</p>
+                <p className="font-mono text-[10px] text-muted-foreground">Conectado</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { logoutAccount() }}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-surface-2 border border-border"
+                >Cerrar Sesión</button>
+                <button
+                  onClick={() => { resetAll() }}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-neon-cyan/10 text-neon-cyan neon-border"
+                >Reset All</button>
+              </div>
+            </div>
+          ) : (
+            <AccountLoginForm onLogin={async (u, p, mode) => {
+              const res = await loginAccount(u, p, mode)
+              if (!res?.ok) alert(res?.error === 'invalid_pin' ? 'PIN incorrecto' : res?.error === 'account_exists' ? 'Esa cuenta ya existe' : 'Login fallido')
+              return res
+            }} />
+          )}
+        </div>
+      </NeonCard>
     </div>
   )
 }
@@ -270,6 +321,74 @@ function SettingsToggle({
           }`}
         />
       </button>
+    </div>
+  )
+}
+
+function AccountLoginForm({ onLogin }: { onLogin: (username: string, pin: string) => Promise<void> }) {
+  const [username, setUsername] = useState('')
+  const [pin, setPin] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const submit = async () => {
+    if (!username?.trim() || !/^[0-9]{4,}$/.test(pin)) {
+      alert('Usuario y PIN (4+ dígitos) requeridos')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await onLogin(username.trim(), pin.trim())
+      if (res?.ok && res.found) alert('Cuenta encontrada. Sesión iniciada.')
+      else if (res?.ok && res.created) alert('Cuenta creada y sincronizada.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <label className="mb-1 block font-mono text-[10px] text-muted-foreground">Usuario</label>
+        <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground" />
+      </div>
+      <div>
+        <label className="mb-1 block font-mono text-[10px] text-muted-foreground">PIN (4+ dígitos)</label>
+        <input value={pin} onChange={(e) => setPin(e.target.value)} inputMode="numeric" className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={submit} disabled={loading} className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold bg-neon-cyan/15 text-neon-cyan neon-border">{loading ? 'Entrando...' : 'Entrar / Crear'}</button>
+      </div>
+      <p className="font-mono text-[10px] text-muted-foreground">Si el usuario no existe se creará una cuenta nueva con este PIN y tu estado actual.</p>
+    </div>
+  )
+}
+
+function BackendConfig() {
+  const [url, setUrl] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('backendUrl') || '' : ''))
+  const [enabled, setEnabled] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('useBackend') === 'true' : false))
+
+  const apply = () => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem('backendUrl', url)
+    localStorage.setItem('useBackend', enabled ? 'true' : 'false')
+    alert('Configuracion guardada. Si activaste el backend, asegúrate de que el servidor esté corriendo y refresca la página.')
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <label className="mb-1 block font-mono text-[10px] text-muted-foreground">Backend URL</label>
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://localhost:4001" className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs text-foreground" />
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs text-foreground">Usar backend</span>
+        <button onClick={() => setEnabled(!enabled)} role="switch" aria-checked={enabled} className={`relative h-6 w-11 rounded-full transition-all ${enabled ? "bg-neon-cyan/30" : "bg-surface-3"}`}>
+          <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full transition-all ${enabled ? "translate-x-5 bg-neon-cyan glow-cyan" : "bg-muted-foreground"}`} />
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={apply} className="rounded-lg px-3 py-2 text-xs font-semibold bg-neon-cyan/15 text-neon-cyan neon-border">Guardar</button>
+      </div>
     </div>
   )
 }
