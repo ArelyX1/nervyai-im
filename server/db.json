@@ -575,7 +575,17 @@
                   "level": 0,
                   "xpRequired": 1000,
                   "xpCurrent": 0,
-                  "children": [],
+                  "children": [
+                    {
+                      "id": "cfd73170-1fc2-4f6c-8a37-861f576001b0",
+                      "name": "Acuarelas",
+                      "level": 0,
+                      "xpRequired": 1000,
+                      "xpCurrent": 0,
+                      "children": [],
+                      "parentId": "visual-art"
+                    }
+                  ],
                   "parentId": null
                 },
                 {
@@ -702,21 +712,23 @@
         },
         "tasks": [
           {
-            "id": "29a43d73-1d73-4f85-ad4b-79241faffe11",
-            "description": "",
-            "frequency": "daily",
+            "id": "32a1ceca-6760-437e-ae65-98d14b6f9329",
+            "description": "Pintar con acuarelas mi portada como stickers",
+            "frequency": "one-time",
             "priority": "medium",
-            "status": "completed",
+            "status": "pending",
             "validationRule": "manual-confirm",
-            "xpReward": 100,
-            "createdAt": "2026-03-08T02:23:35.701Z",
-            "tags": [],
-            "streak": 1,
-            "title": "aaaaaaaaaaa",
-            "skillCategoryId": "intellect",
-            "subSkillId": "math",
-            "dueDate": "2026-03-07",
-            "completedAt": "2026-03-08T02:23:39.007Z"
+            "xpReward": 15,
+            "createdAt": "2026-03-08T13:44:52.409Z",
+            "tags": [
+              "arte",
+              "pintura"
+            ],
+            "streak": 0,
+            "title": "Pintar la caratula de mi sketch",
+            "skillCategoryId": "creativity",
+            "subSkillId": "cfd73170-1fc2-4f6c-8a37-861f576001b0",
+            "dueDate": "2026-03-08"
           }
         ],
         "goals": [],
