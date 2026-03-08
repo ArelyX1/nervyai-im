@@ -152,6 +152,7 @@ export function useAppStore(): AppStore {
     // Priority 4: For external URLs, try to infer backend URL from frontend URL
     // If frontend is at: my-app.example.com → backend is at: api.example.com
     // If frontend is at: example.com:30002 → backend is at: example.com:40013
+    // For K8s/Cloudflare: if frontend is at app.neravy.us → backend is at api.neravy.us
     if (hostname && !hostname.includes("localhost")) {
       // For K8s with service name routing
       // If hostname is like "app-frontend.default.svc.cluster.local"
@@ -164,9 +165,15 @@ export function useAppStore(): AppStore {
         return backendUrl
       }
 
-      // For Cloudflare or DNS-based routing
+      // For Cloudflare/DNS-based routing with subdomain pattern
+      // If frontend is at: app.neravy.us → backend is at: api.neravy.us
+      if (hostname === "app.neravy.us") {
+        const backendUrl = `http://api.neravy.us:4001/api`
+        console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare subdomain URL=', backendUrl)
+        return backendUrl
+      }
+
       // If frontend is at: frontend.example.com → backend is at: backend.example.com or api.example.com
-      const protocol = window.location?.protocol || "https:"
       if (hostname.startsWith("frontend")) {
         const backendUrl = `${protocol}//backend.${hostname.substring("frontend.".length)}`
         console.debug('[CLIENT] getDefaultBackendUrl: DNS subdomain URL=', backendUrl)

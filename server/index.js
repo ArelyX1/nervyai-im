@@ -11,10 +11,19 @@ const app = express()
 app.use(cors({ origin: '*' }))
 app.use(express.json({ limit: "10mb" }))
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown'
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] ${req.method} ${req.url} from ${clientIP}`)
+  next()
+})
+
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  console.log("[HEALTH] ✅ GET /api/health - Backend is healthy")
-  res.json({ status: "ok", message: "Backend is running", timestamp: new Date().toISOString() })
+  const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown'
+  console.log(`[HEALTH] ✅ GET /api/health from ${clientIP} - Backend is healthy`)
+  res.json({ status: "ok", message: "Backend is running", timestamp: new Date().toISOString(), clientIP })
 })
 
 // Accounts login/create
@@ -176,14 +185,17 @@ app.post("/api/reset", async (req, res) => {
 })
 
 const PORT = process.env.PORT || 4001
-app.listen(PORT, '0.0.0.0', () => {
+const HOST = process.env.HOST || '0.0.0.0'
+
+app.listen(PORT, HOST, () => {
   console.log(`\n${'='.repeat(60)}`)
   console.log(`✅ Backend Express+Lowdb RUNNING`)
+  console.log(`   Listening on: ${HOST}:${PORT}`)
   console.log(`   Local: http://localhost:${PORT}`)
-  console.log(`   Network: http://YOUR_IP:${PORT}`)
-  console.log(`   Docker: http://0.0.0.0:${PORT}`)
-  console.log(`   K8s: http://BACKEND_SERVICE:${PORT}`)
-  console.log(`   Cloudflare: http://app.neravy.us:${PORT}`)
+  console.log(`   Network: http://${HOST}:${PORT}`)
+  console.log(`   K8s Service: http://api-service:${PORT}`)
+  console.log(`   Cloudflare: http://api.neravy.us:${PORT}`)
   console.log(`   Database: ./db.json`)
+  console.log(`   CORS: Enabled for all origins`)
   console.log(`${'='.repeat(60)}\n`)
 })

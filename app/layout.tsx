@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next"
+import Head from "next/head"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -37,10 +38,10 @@ export default function RootLayout({
   
   return (
     <html lang="es" className="dark">
-      <head>
+      <Head>
         {/* Meta tag for backend URL - can be overridden at container runtime */}
         {backendUrl && <meta name="backend-url" content={backendUrl} />}
-      </head>
+      </Head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}
       >
