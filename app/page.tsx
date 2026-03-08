@@ -11,7 +11,7 @@
 
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { AppProvider, useApp } from "@/src/shared/presentation/app-context"
 import { BottomNav, type NavTab } from "@/src/shared/presentation/components/bottom-nav"
 import { DashboardScreen } from "@/src/dashboard/presentation/dashboard-screen"
@@ -82,38 +82,71 @@ export default function Page() {
   )
 }
 
+function BackendHealthCheck() {
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking')
+
+  React.useEffect(() => {
+    const checkBackend = async () => {
+      const backendUrl = `http://${window.location.hostname}:4001/api/health`
+      console.log('[HEALTH] Checking backend at', backendUrl)
+      try {
+        const res = await fetch(backendUrl, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        if (res.ok) {
+          console.log('[HEALTH] Backend is online ✅')
+          setBackendStatus('online')
+        } else {
+          console.log('[HEALTH] Backend responded but not OK:', res.status)
+          setBackendStatus('offline')
+        }
+      } catch (err) {
+        console.log('[HEALTH] Backend connection failed:', err)
+        setBackendStatus('offline')
+      }
+    }
+
+    checkBackend()
+    const interval = setInterval(checkBackend, 5000) // Check every 5 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  const statusColor = backendStatus === 'online' ? 'text-neon-cyan' : backendStatus === 'offline' ? 'text-neon-magenta' : 'text-yellow-400'
+  const statusText = backendStatus === 'online' ? 'Backend ✅' : backendStatus === 'offline' ? 'Backend ❌' : 'Verificando...'
+
+  return (
+    <div className={`font-mono text-xs ${statusColor} mb-4`}>
+      {statusText}
+    </div>
+  )
+}
+
 function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
   const { loginAccount } = useApp()
   const [mode, setMode] = useState<'login' | 'create'>('login')
-  const [backendUrl, setBackendUrl] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('backendUrl') || '' : ''
-  )
   const [user, setUser] = useState("")
   const [pin, setPin] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const submit = async () => {
+    console.log('[LOGIN] Starting login/create process')
     setError(null)
     if (!user.trim()) return setError('Introduce un usuario')
     if (!/^[0-9]{4,}$/.test(pin)) return setError('El PIN debe tener al menos 4 dígitos')
-    if (backendUrl.trim()) {
-      if (typeof window !== 'undefined') {
-        let u = backendUrl.trim().replace(/\/$/, '')
-        if (!u.endsWith('/api')) u = u + (u.endsWith('/') ? 'api' : '/api')
-        localStorage.setItem('backendUrl', u)
-        localStorage.setItem('useBackend', 'true')
-      }
-    }
     setLoading(true)
+    console.log('[LOGIN] Calling loginAccount with:', { user: user.trim(), pin, mode })
     try {
       const res = await loginAccount(user.trim(), pin, mode)
+      console.log('[LOGIN] loginAccount response:', res)
       if (!res || !res.ok) {
         if (res?.error === 'invalid_pin') return setError('PIN incorrecto')
         if (res?.error === 'account_exists') return setError('Esa cuenta ya existe. Usa Iniciar sesión.')
         if (res?.error === 'account_not_found') return setError('Cuenta no encontrada. Crea una nueva.')
         return setError('Error de conexión. Verifica la URL del backend.')
       }
+      console.log('[LOGIN] Login successful, account created/logged in')
       onSuccess?.()
     } finally {
       setLoading(false)
@@ -122,22 +155,7 @@ function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Backend URL (optional) - needed for multi-device sync */}
-      <div>
-        <label className="mb-1 block font-mono text-[10px] text-muted-foreground">
-          URL del backend (opcional)
-        </label>
-        <input
-          value={backendUrl}
-          onChange={(e) => setBackendUrl(e.target.value)}
-          placeholder="http://localhost:4001"
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
-        />
-        <p className="mt-1 font-mono text-[9px] text-muted-foreground">
-          Para sincronizar entre dispositivos, usa la URL de tu servidor.
-        </p>
-      </div>
-
+      <BackendHealthCheck />
       {/* Tabs: Iniciar sesión / Crear cuenta */}
       <div className="flex gap-2 rounded-lg bg-surface-3 p-1">
         <button

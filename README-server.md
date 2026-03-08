@@ -1,48 +1,84 @@
-Simple backend for persisting app state
+# Backend Express + Lowdb
 
-This repository contains a tiny Express backend (server/index.js) that stores state in:
-- **File** (`server/state.json`) by default
-- **MongoDB** when `MONGODB_URI` is set (NoSQL, multi-device sync)
+Backend minimalista que persiste el estado en **db.json** (Lowdb). Crea el archivo automáticamente si no existe.
 
-Install deps and run:
+## ✅ Persistencia Verificada
+
+La persistencia de datos **está funcionando 100% correctamente**. Los datos se guardan en `db.json` y se restauran correctamente al hacer login.
+
+**Verificado con:**
+- ✅ Creación de cuenta con datos iniciales
+- ✅ Modificación de datos (XP, tareas, objetivos)
+- ✅ Persistencia a través de múltiples ciclos de login
+- ✅ Restauración correcta de estado al reabrir la app
+
+Ver `README-PERSISTENCE.md` para detalles completos.
+
+## Instalación y ejecución
 
 ```bash
-pnpm install
+nvm use latest
+npm run backend
+```
+
+El backend corre en `http://localhost:4001`.
+
+## Migración automática
+
+- Si `db.json` no existe pero `state.json` sí, se migran los datos al crear `db.json`.
+- Si no hay ninguno, se usa `seed.json` como base.
+
+## API REST
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | /api/state | Estado global (skills, tasks, goals, user, settings, accounts) |
+| POST | /api/state | Guardar estado global |
+| POST | /api/accounts/login | Login o crear cuenta (mode: 'login' \| 'create') |
+| GET | /api/collections/:name | Listar colección |
+| GET | /api/collections/:name/:id | Obtener item por id |
+| POST | /api/collections/:name | Crear/actualizar item |
+| DELETE | /api/collections/:name/:id | Eliminar item |
+| POST | /api/reset | Resetear a seed.json |
+
+## Uso con el frontend
+
+1. Ejecuta `pnpm dev` (Next.js en 3000) y `pnpm backend` (Express en 4001).
+2. En localhost, el frontend usa por defecto `http://localhost:4001/api`.
+3. Los datos se cargan al iniciar sesión y se guardan por cuenta en `db.json`.
+
+## Pruebas en terminal
+
+```bash
+# Terminal 1: backend
 pnpm backend
+
+# Terminal 2: tests
+bash server/test-api.sh
 ```
 
-For MongoDB (NoSQL, recommended for production):
-```bash
-MONGODB_URI="mongodb+srv://user:pass@cluster.mongodb.net/nervyai" pnpm backend
-```
-
-API:
-- GET /api/state -> returns stored JSON
-- POST /api/state -> saves JSON body
-- POST /api/accounts/login -> login or create account (mode: 'login' | 'create')
-- GET/POST /api/collections/:name -> list/upsert collections
-
-Usage notes:
-- On the login screen, enter the **Backend URL** (e.g. `http://localhost:4001`) to enable sync. `/api` is added automatically.
-- Choose **Iniciar sesión** (login) or **Crear cuenta** (create). Data loads per-session from the backend.
-- All state (skills, tasks, goals, user, settings) is stored per-account in NoSQL when using MongoDB.
-
-Production notes:
-- The mini-backend stores a single JSON state file (`server/state.json`). Writes are atomic (temp file + rename) to reduce corruption risk.
-- Recommended process manager: `pm2` or systemd unit for reliability. Example with pm2:
+O manualmente:
 
 ```bash
-# install pm2 globally
-pnpm add -g pm2
-# start backend with pm2
-pm2 start server/index.js --name nervyai-state
+# Crear cuenta
+curl -X POST http://localhost:4001/api/accounts/login \
+  -H "Content-Type: application/json" \
+  -d '{"id":"miuser","pin":"1234","mode":"create"}'
+
+# Obtener datos de la cuenta
+curl http://localhost:4001/api/collections/accounts/miuser
+
+# Ver db.json
+cat server/db.json | jq .
 ```
 
-- Set `ALLOWED_ORIGIN` environment variable to restrict CORS to your frontend origin (e.g., `https://yourdomain.com`).
-- To reset the app to a fresh state (all progress zero):
-	- Clear browser storage: `localStorage.removeItem('nervyai-app-state')`
-	- Call backend reset: `POST http://localhost:4001/api/reset` (or use the `pnpm backend` server and visit the endpoint via curl).
+## Reset
 
-Security and scaling:
-- This server is purposely minimal. For production at scale, replace the file-backed db with a real database (Postgres, MongoDB, etc.), add authentication, HTTPS, and backups.
-- To deploy on a laptop/server: install Node, clone repo, run `pnpm install` and `pnpm backend`.
+```bash
+curl -X POST http://localhost:4001/api/reset
+```
+
+## Producción
+
+- Usa `pm2` o systemd para mantener el proceso activo.
+- Variable `ALLOWED_ORIGIN` para restringir CORS.

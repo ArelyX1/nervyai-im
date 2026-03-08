@@ -28,12 +28,6 @@ export function SettingsScreen() {
   const [saved, setSaved] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSaveProfile = () => {
-    updateUser({ nickname })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
   /** Handle photo upload via file input */
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -111,22 +105,18 @@ export function SettingsScreen() {
             <span className="font-mono text-[10px] text-muted-foreground">XP Total</span>
             <span className="font-mono text-sm font-bold text-neon-magenta">{user.totalXp.toLocaleString()}</span>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleSaveProfile}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-neon-cyan/15 py-2 font-mono text-xs font-semibold text-neon-cyan neon-border transition-all hover:bg-neon-cyan/25"
-            >
-              <Save className="h-3.5 w-3.5" />
-              {saved ? "Guardado!" : "Guardar Perfil"}
-            </button>
-            <button
-              onClick={async () => { await saveNow(); alert('Estado guardado en backend (si configurado)') }}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-neon-magenta/10 py-2 font-mono text-xs font-semibold text-neon-magenta neon-border-magenta transition-all hover:bg-neon-magenta/20"
-            >
-              <Save className="h-3.5 w-3.5" />
-              Guardar Todo
-            </button>
-          </div>
+          <button
+            onClick={async () => {
+              updateUser({ nickname })
+              setSaved(true)
+              setTimeout(() => setSaved(false), 2000)
+              await saveNow()
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-neon-cyan/15 py-2 font-mono text-xs font-semibold text-neon-cyan neon-border transition-all hover:bg-neon-cyan/25"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {saved ? "Guardado" : "Guardar"}
+          </button>
         </div>
       </NeonCard>
 
@@ -387,7 +377,7 @@ function BackendConfig() {
         </button>
       </div>
       <div className="flex gap-2">
-        <button onClick={apply} className="rounded-lg px-3 py-2 text-xs font-semibold bg-neon-cyan/15 text-neon-cyan neon-border">Guardar</button>
+        <button onClick={apply} className="rounded-lg px-3 py-2 text-xs font-semibold bg-neon-cyan/15 text-neon-cyan neon-border">Aplicar</button>
       </div>
     </div>
   )

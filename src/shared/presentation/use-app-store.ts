@@ -15,6 +15,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { toast } from "sonner"
 import { skillsAdapter, tasksAdapter, goalsAdapter } from "@/src/shared/infrastructure/container"
 import type { SkillRadarData, SkillCategory } from "@/src/skills/domain/skill.entity"
 import { findNode } from "@/src/skills/domain/skill.entity"
@@ -113,20 +114,50 @@ export function useAppStore(): AppStore {
   }
 
   // Backend sync helpers (optional)
+  function getDefaultBackendUrl(): string | null {
+    if (typeof window === "undefined") return null
+    const hostname = window.location?.hostname
+    console.debug('[CLIENT] getDefaultBackendUrl: hostname=', hostname)
+
+    // Check if it's localhost or a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    const isLocalNetwork = hostname === "localhost" ||
+                          hostname?.startsWith("192.168.") ||
+                          hostname?.startsWith("10.") ||
+                          (hostname?.startsWith("172.") && parseInt(hostname.split(".")[1]) >= 16 && parseInt(hostname.split(".")[1]) <= 31)
+
+    if (isLocalNetwork) {
+      const backendUrl = `http://${hostname}:4001/api`
+      console.debug('[CLIENT] getDefaultBackendUrl: using backend URL=', backendUrl)
+      return backendUrl
+    }
+
+    console.debug('[CLIENT] getDefaultBackendUrl: using Next.js API routes')
+    return "/api"
+  }
+
+  function getBackendUrl(): string {
+    if (typeof window === "undefined") return "/api"
+    const stored = localStorage.getItem("backendUrl")
+    if (stored && stored.trim().length > 0) return stored
+    const def = getDefaultBackendUrl()
+    return def || "/api"
+  }
+
   function useBackendEnabled() {
     if (typeof window === "undefined") return false
-    // Use backend whenever a backendUrl is configured so changes are
-    // immediately saved and available to other devices. Keep the
-    // `useBackend` toggle as an explicit opt-in, but prefer `backendUrl`
-    // presence as the deciding factor for automatic sync.
-    const hasUrl = !!localStorage.getItem('backendUrl')
-    const enabledToggle = localStorage.getItem('useBackend') === 'true'
-    return hasUrl || enabledToggle
+    // Si el usuario lo forzó, respétalo
+    const explicit = localStorage.getItem("useBackend")
+    if (explicit === "true") return true
+    if (explicit === "false") return false
+    // Si hay URL explícita o una URL por defecto, usamos backend
+    const hasUrl = !!(localStorage.getItem("backendUrl") || getDefaultBackendUrl())
+    console.debug('[CLIENT] useBackendEnabled:', hasUrl, 'backendUrl:', getBackendUrl())
+    return hasUrl
   }
 
   async function fetchFromServer() {
     try {
-      const url = localStorage.getItem('backendUrl') || '/api'
+      const url = getBackendUrl()
       // If an account is selected, fetch its state from accounts collection
       const acct = typeof window !== 'undefined' ? localStorage.getItem('accountId') : null
       const endpoint = acct ? `${url}/collections/accounts/${encodeURIComponent(acct)}` : `${url}/state`
@@ -146,26 +177,38 @@ export function useAppStore(): AppStore {
 
   async function saveToServer(state: { skills: SkillRadarData; tasks: Task[]; goals: Goal[]; user: UserProfile; settings: UserSettings }) {
     try {
-      const url = localStorage.getItem('backendUrl') || '/api'
+      const url = getBackendUrl()
       const acct = typeof window !== 'undefined' ? localStorage.getItem('accountId') : null
       if (acct) {
-        // upsert account with its state
-        console.debug('[CLIENT] saveToServer -> upsert account', acct)
-        await fetch(`${url}/collections/accounts`, {
+        // upsert account with its state (don't send pin on every autosave - only send it if changing)
+        console.debug('[CLIENT] saveToServer -> upsert account', acct, 'with state')
+        const response = await fetch(`${url}/collections/accounts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: acct, pin: (localStorage.getItem('accountPin') || ''), state }),
+          body: JSON.stringify({ id: acct, state }),
         })
-        return
+        if (!response.ok) {
+          console.warn('[CLIENT] saveToServer account failed:', response.status, response.statusText)
+          return false
+        }
+        console.debug('[CLIENT] saveToServer account success')
+        return true
       }
       console.debug('[CLIENT] saveToServer -> saving state to', `${url}/state`)
-      await fetch(`${url}/state`, {
+      const response = await fetch(`${url}/state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(state),
       })
+      if (!response.ok) {
+        console.warn('[CLIENT] saveToServer state failed:', response.status, response.statusText)
+        return false
+      }
+      console.debug('[CLIENT] saveToServer state success')
+      return true
     } catch (e) {
-      console.warn('saveToServer failed', e)
+      console.warn('[CLIENT] saveToServer error:', e)
+      return false
     }
   }
 
@@ -173,16 +216,24 @@ export function useAppStore(): AppStore {
     async function saveNow() {
       try {
         const state = stateRef.current
-        if (useBackendEnabled()) await saveToServer(state)
+        console.debug('[CLIENT] saveNow triggered', state)
+        if (useBackendEnabled()) {
+          const result = await saveToServer(state)
+          if (!result) {
+            console.warn('[CLIENT] saveNow: backend save failed, trying localStorage fallback')
+          }
+        }
         try { saveToStorage(state) } catch (_) {}
+        toast.success("Guardado", { description: "Datos guardados correctamente." })
       } catch (e) {
-        console.warn('saveNow failed', e)
+        console.error('[CLIENT] saveNow failed', e)
+        toast.error("Error al guardar")
       }
     }
 
   // Account login/logout helpers. mode: 'login' = must exist; 'create' = must not exist
   async function loginAccount(username: string, pin: string, mode?: 'login' | 'create') {
-    const backendUrl = typeof window !== 'undefined' ? localStorage.getItem('backendUrl') : null
+    const backendUrl = typeof window !== 'undefined' ? getBackendUrl() : null
     const nid = String(username || '').trim().toLowerCase()
     if (backendUrl) {
       try {
@@ -196,6 +247,7 @@ export function useAppStore(): AppStore {
         })
         if (!res.ok) {
           const json = await res.json().catch(() => ({}))
+          console.warn('[CLIENT] loginAccount failed response:', json)
           return { ok: false, error: json.error || 'login_failed' }
         }
         const json = await res.json()
@@ -203,6 +255,7 @@ export function useAppStore(): AppStore {
         if (json && json.ok) {
           // apply returned state and sync to adapters so save/refresh use correct data
           if (json.state) {
+            console.debug('[CLIENT] loginAccount: applying returned state', json.state)
             if (json.state.skills) {
               setSkills(json.state.skills)
               ;(skillsAdapter as any).loadSkillRadar?.(json.state.skills)
@@ -226,9 +279,10 @@ export function useAppStore(): AppStore {
           console.debug('[CLIENT] loginAccount -> stored accountId=', nid)
           return { ok: true, found: !!json.found, created: !!json.created }
         }
+        console.warn('[CLIENT] loginAccount: ok was false in response')
         return { ok: false }
       } catch (e) {
-        console.warn('loginAccount failed (backend)', e)
+        console.warn('[CLIENT] loginAccount failed (backend)', e)
         // fallthrough to local account fallback if backend fails
       }
     }
@@ -261,6 +315,8 @@ export function useAppStore(): AppStore {
   // On mount, hydrate state from backend (if enabled) or from localStorage.
   useEffect(() => {
     let mounted = true
+    let autosaveTimer: NodeJS.Timeout | null = null
+    
     async function hydrate() {
       if (typeof window !== 'undefined') {
         const acct = localStorage.getItem('accountId')
@@ -277,23 +333,27 @@ export function useAppStore(): AppStore {
         }
       }
       if (useBackendEnabled()) {
+        const acct = typeof window !== 'undefined' ? localStorage.getItem('accountId') : null
         const json = await fetchFromServer()
-        if (!json || !mounted) return
-        if (json.skills) {
-          setSkills(json.skills)
-          ;(skillsAdapter as any).loadSkillRadar?.(json.skills)
+        if (!mounted) return
+        if (json) {
+          if (json.skills) {
+            setSkills(json.skills)
+            ;(skillsAdapter as any).loadSkillRadar?.(json.skills)
+          }
+          if (json.tasks) {
+            setTasks(json.tasks)
+            ;(tasksAdapter as any).loadTasks?.(json.tasks)
+          }
+          if (json.goals) {
+            setGoals(json.goals)
+            ;(goalsAdapter as any).loadGoals?.(json.goals)
+          }
+          if (json.user) setUser(json.user)
+          if (json.settings) setSettings(json.settings)
+          try { saveToStorage(json) } catch (_) {}
         }
-        if (json.tasks) {
-          setTasks(json.tasks)
-          ;(tasksAdapter as any).loadTasks?.(json.tasks)
-        }
-        if (json.goals) {
-          setGoals(json.goals)
-          ;(goalsAdapter as any).loadGoals?.(json.goals)
-        }
-        if (json.user) setUser(json.user)
-        if (json.settings) setSettings(json.settings)
-        try { saveToStorage(json) } catch (_) {}
+        if (acct && acct !== 'simuser') setAccountId(acct)
         return
       }
 
@@ -356,22 +416,31 @@ export function useAppStore(): AppStore {
         // ignore
       }
     }
+    
     hydrate()
-    return () => { mounted = false }
-  }, [])
-      // Autosave interval: when a backendUrl exists, periodically push current state
-      let autosaveTimer: any = null
-      try {
-        if (typeof window !== 'undefined' && (localStorage.getItem('backendUrl') || localStorage.getItem('useBackend') === 'true')) {
-          autosaveTimer = setInterval(() => {
+    
+    // Autosave interval: when a backendUrl exists, periodically push current state
+    try {
+      if (typeof window !== 'undefined' && useBackendEnabled()) {
+        console.debug('[useAppStore] setting up autosave every 20s, backend URL:', getBackendUrl())
+        autosaveTimer = setInterval(() => {
+          if (mounted) {
             const s = stateRef.current
+            console.debug('[useAppStore] autosave firing, state.user.totalXp:', s.user?.totalXp)
             saveToServer(s)
             try { saveToStorage(s) } catch (_) {}
-          }, 20000) // every 20s
-        }
-      } catch (e) {
-        // ignore
+          }
+        }, 20000) // every 20s
       }
+    } catch (e) {
+      console.warn('[useAppStore] autosave setup failed', e)
+    }
+    
+    return () => {
+      mounted = false
+      if (autosaveTimer) clearInterval(autosaveTimer)
+    }
+  }, [])
 
   const refresh = useCallback(() => {
     setSkills(skillsAdapter.getSkillRadar())
@@ -420,20 +489,23 @@ export function useAppStore(): AppStore {
       skillsAdapter.updateNodeXp(task.skillCategoryId, targetNodeId, xp)
     }
 
-    setUser((prev) => {
-      const updated = {
-        ...prev,
-        totalXp: prev.totalXp + xp,
-        currentStreak: prev.currentStreak + 1,
-        longestStreak: Math.max(prev.longestStreak, prev.currentStreak + 1),
-      }
-      const state = { skills: skillsAdapter.getSkillRadar(), tasks: tasksAdapter.getAllTasks(), goals: goalsAdapter.getAllGoals(), user: updated, settings }
-      saveToStorage(state)
-      if (useBackendEnabled()) saveToServer(state)
-      return updated
-    })
+    // Update user XP
+    const newSkills = skillsAdapter.getSkillRadar()
+    const newUser: UserProfile = {
+      ...user,
+      totalXp: user.totalXp + xp,
+      currentStreak: user.currentStreak + 1,
+      longestStreak: Math.max(user.longestStreak, user.currentStreak + 1),
+    }
+    setUser(newUser)
+    setSkills(newSkills)
     refresh()
-  }, [refresh])
+    
+    // IMMEDIATELY SAVE
+    const state = { skills: newSkills, tasks: tasksAdapter.getAllTasks(), goals: goalsAdapter.getAllGoals(), user: newUser, settings }
+    try { saveToStorage(state) } catch (_) {}
+    if (useBackendEnabled()) saveToServer(state)
+  }, [settings])
 
   const deleteTask = useCallback((id: string) => {
     tasksAdapter.deleteTask(id)
@@ -463,6 +535,7 @@ export function useAppStore(): AppStore {
     const state = { skills, tasks, goals: g, user, settings }
     saveToStorage(state)
     if (useBackendEnabled()) saveToServer(state)
+    toast.success("Objetivo agregado", { description: data.title })
   }, [])
 
   const deleteGoal = useCallback((id: string) => {
@@ -600,7 +673,7 @@ export function useAppStore(): AppStore {
       if (useBackendEnabled()) {
         (async () => {
           try {
-            const url = localStorage.getItem('backendUrl') || '/api'
+            const url = getBackendUrl()
             const res = await fetch(`${url}/reset`, { method: 'POST' })
             if (!res.ok) throw new Error('reset failed')
             const body = await res.json()

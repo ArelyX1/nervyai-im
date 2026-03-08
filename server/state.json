@@ -1,342 +1,362 @@
 {
-  "skills": [
+  "skills": {
+    "categories": [
+      {
+        "id": "intellect",
+        "name": "Intelecto & Ciencia",
+        "icon": "Brain",
+        "color": "hsl(185, 100%, 50%)",
+        "level": 4,
+        "children": [
+          {
+            "id": "physics",
+            "name": "Fisica",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "math",
+            "name": "Matematicas",
+            "level": 20,
+            "xpRequired": 1000,
+            "xpCurrent": 200,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "programming",
+            "name": "Programacion",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "parentId": null,
+            "children": [
+              {
+                "id": "frontend",
+                "name": "Frontend",
+                "level": 0,
+                "xpRequired": 1000,
+                "xpCurrent": 0,
+                "children": [],
+                "parentId": "programming"
+              },
+              {
+                "id": "backend",
+                "name": "Backend",
+                "level": 0,
+                "xpRequired": 1000,
+                "xpCurrent": 0,
+                "children": [],
+                "parentId": "programming"
+              },
+              {
+                "id": "devops",
+                "name": "DevOps",
+                "level": 0,
+                "xpRequired": 1000,
+                "xpCurrent": 0,
+                "children": [],
+                "parentId": "programming"
+              }
+            ]
+          },
+          {
+            "id": "networking",
+            "name": "Redes",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "ai",
+            "name": "IA & ML",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          }
+        ]
+      },
+      {
+        "id": "wellness",
+        "name": "Bienestar & Salud",
+        "icon": "Heart",
+        "color": "hsl(300, 100%, 50%)",
+        "level": 0,
+        "children": [
+          {
+            "id": "health",
+            "name": "Salud General",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "exercise",
+            "name": "Ejercicio",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "nutrition",
+            "name": "Nutricion",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "meditation",
+            "name": "Meditacion",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "sleep",
+            "name": "Sueno",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          }
+        ]
+      },
+      {
+        "id": "humanities",
+        "name": "Humanidades & Sociedad",
+        "icon": "BookOpen",
+        "color": "hsl(82, 100%, 55%)",
+        "level": 0,
+        "children": [
+          {
+            "id": "sociology",
+            "name": "Sociologia",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "history",
+            "name": "Historia",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "philosophy",
+            "name": "Filosofia",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "languages",
+            "name": "Bilingue",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "communication",
+            "name": "Comunicacion",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          }
+        ]
+      },
+      {
+        "id": "creativity",
+        "name": "Creatividad & Arte",
+        "icon": "Palette",
+        "color": "hsl(35, 100%, 55%)",
+        "level": 0,
+        "children": [
+          {
+            "id": "visual-art",
+            "name": "Arte Visual",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "music",
+            "name": "Musica",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "design",
+            "name": "Diseno",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "writing",
+            "name": "Escritura",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          }
+        ]
+      },
+      {
+        "id": "personal",
+        "name": "Desarrollo Personal",
+        "icon": "Target",
+        "color": "hsl(55, 100%, 55%)",
+        "level": 0,
+        "children": [
+          {
+            "id": "responsibility",
+            "name": "Responsabilidad",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "discipline",
+            "name": "Disciplina",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "productivity",
+            "name": "Productividad",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "leadership",
+            "name": "Liderazgo",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          }
+        ]
+      },
+      {
+        "id": "finance",
+        "name": "Finanzas & Exito",
+        "icon": "TrendingUp",
+        "color": "hsl(220, 100%, 60%)",
+        "level": 0,
+        "children": [
+          {
+            "id": "savings",
+            "name": "Ahorro",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "investments",
+            "name": "Inversiones",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "business",
+            "name": "Negocios",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          },
+          {
+            "id": "income",
+            "name": "Ingresos",
+            "level": 0,
+            "xpRequired": 1000,
+            "xpCurrent": 0,
+            "children": [],
+            "parentId": null
+          }
+        ]
+      }
+    ],
+    "overallLevel": 1
+  },
+  "tasks": [
     {
-      "id": "intellect",
-      "name": "Intelecto & Ciencia",
-      "icon": "Brain",
-      "color": "hsl(185, 100%, 50%)",
-      "level": 0,
-      "children": [
-        {
-          "id": "physics",
-          "name": "Fisica",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "math",
-          "name": "Matematicas",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "programming",
-          "name": "Programacion",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "parentId": null,
-          "children": [
-            {
-              "id": "frontend",
-              "name": "Frontend",
-              "level": 0,
-              "xpRequired": 1000,
-              "xpCurrent": 0,
-              "children": [],
-              "parentId": "programming"
-            },
-            {
-              "id": "backend",
-              "name": "Backend",
-              "level": 0,
-              "xpRequired": 1000,
-              "xpCurrent": 0,
-              "children": [],
-              "parentId": "programming"
-            },
-            {
-              "id": "devops",
-              "name": "DevOps",
-              "level": 0,
-              "xpRequired": 1000,
-              "xpCurrent": 0,
-              "children": [],
-              "parentId": "programming"
-            }
-          ]
-        },
-        {
-          "id": "networking",
-          "name": "Redes",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "ai",
-          "name": "IA & ML",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        }
-      ]
-    },
-    {
-      "id": "wellness",
-      "name": "Bienestar & Salud",
-      "icon": "Heart",
-      "color": "hsl(300, 100%, 50%)",
-      "level": 0,
-      "children": [
-        {
-          "id": "health",
-          "name": "Salud General",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "exercise",
-          "name": "Ejercicio",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "nutrition",
-          "name": "Nutricion",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "meditation",
-          "name": "Meditacion",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "sleep",
-          "name": "Sueno",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        }
-      ]
-    },
-    {
-      "id": "humanities",
-      "name": "Humanidades & Sociedad",
-      "icon": "BookOpen",
-      "color": "hsl(82, 100%, 55%)",
-      "level": 0,
-      "children": [
-        {
-          "id": "sociology",
-          "name": "Sociologia",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "history",
-          "name": "Historia",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "philosophy",
-          "name": "Filosofia",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "languages",
-          "name": "Bilingue",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "communication",
-          "name": "Comunicacion",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        }
-      ]
-    },
-    {
-      "id": "creativity",
-      "name": "Creatividad & Arte",
-      "icon": "Palette",
-      "color": "hsl(35, 100%, 55%)",
-      "level": 0,
-      "children": [
-        {
-          "id": "visual-art",
-          "name": "Arte Visual",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "music",
-          "name": "Musica",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "design",
-          "name": "Diseno",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "writing",
-          "name": "Escritura",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        }
-      ]
-    },
-    {
-      "id": "personal",
-      "name": "Desarrollo Personal",
-      "icon": "Target",
-      "color": "hsl(55, 100%, 55%)",
-      "level": 0,
-      "children": [
-        {
-          "id": "responsibility",
-          "name": "Responsabilidad",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "discipline",
-          "name": "Disciplina",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "productivity",
-          "name": "Productividad",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "leadership",
-          "name": "Liderazgo",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        }
-      ]
-    },
-    {
-      "id": "finance",
-      "name": "Finanzas & Exito",
-      "icon": "TrendingUp",
-      "color": "hsl(220, 100%, 60%)",
-      "level": 0,
-      "children": [
-        {
-          "id": "savings",
-          "name": "Ahorro",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "investments",
-          "name": "Inversiones",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "business",
-          "name": "Negocios",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        },
-        {
-          "id": "income",
-          "name": "Ingresos",
-          "level": 0,
-          "xpRequired": 1000,
-          "xpCurrent": 0,
-          "children": [],
-          "parentId": null
-        }
-      ]
+      "id": "3a8b18bd-9ef8-4690-a73a-8de621695fd7",
+      "description": "",
+      "frequency": "one-time",
+      "priority": "medium",
+      "status": "pending",
+      "validationRule": "manual-confirm",
+      "xpReward": 100,
+      "createdAt": "2026-03-08T04:50:45.289Z",
+      "tags": [],
+      "streak": 0,
+      "title": "Pintar",
+      "skillCategoryId": "creativity",
+      "subSkillId": "visual-art",
+      "dueDate": "2026-03-08"
     }
   ],
-  "tasks": [],
   "goals": [],
   "user": {
     "id": "user-1",
     "nickname": "CyberRunner",
     "avatarUrl": null,
     "level": 1,
-    "totalXp": 0,
+    "totalXp": 200,
     "joinedAt": "2026-01-01T00:00:00.000Z",
-    "currentStreak": 0,
-    "longestStreak": 0
+    "currentStreak": 2,
+    "longestStreak": 2
   },
   "settings": {
     "theme": "cyberpunk",
@@ -344,362 +364,5 @@
     "dailyReminderTime": "08:00",
     "strictValidation": true,
     "language": "es"
-  },
-  "accounts": [
-    {
-      "id": "arelyxl",
-      "pin": "9021",
-      "state": {
-        "skills": {
-          "categories": [
-            {
-              "id": "intellect",
-              "name": "Intelecto & Ciencia",
-              "icon": "Brain",
-              "color": "hsl(185, 100%, 50%)",
-              "level": 0,
-              "children": [
-                {
-                  "id": "physics",
-                  "name": "Fisica",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "math",
-                  "name": "Matematicas",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "programming",
-                  "name": "Programacion",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "parentId": null,
-                  "children": [
-                    {
-                      "id": "frontend",
-                      "name": "Frontend",
-                      "level": 0,
-                      "xpRequired": 1000,
-                      "xpCurrent": 0,
-                      "children": [],
-                      "parentId": "programming"
-                    },
-                    {
-                      "id": "backend",
-                      "name": "Backend",
-                      "level": 0,
-                      "xpRequired": 1000,
-                      "xpCurrent": 0,
-                      "children": [],
-                      "parentId": "programming"
-                    },
-                    {
-                      "id": "devops",
-                      "name": "DevOps",
-                      "level": 0,
-                      "xpRequired": 1000,
-                      "xpCurrent": 0,
-                      "children": [],
-                      "parentId": "programming"
-                    }
-                  ]
-                },
-                {
-                  "id": "networking",
-                  "name": "Redes",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "ai",
-                  "name": "IA & ML",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                }
-              ]
-            },
-            {
-              "id": "wellness",
-              "name": "Bienestar & Salud",
-              "icon": "Heart",
-              "color": "hsl(300, 100%, 50%)",
-              "level": 0,
-              "children": [
-                {
-                  "id": "health",
-                  "name": "Salud General",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "exercise",
-                  "name": "Ejercicio",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "nutrition",
-                  "name": "Nutricion",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "meditation",
-                  "name": "Meditacion",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "sleep",
-                  "name": "Sueno",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                }
-              ]
-            },
-            {
-              "id": "humanities",
-              "name": "Humanidades & Sociedad",
-              "icon": "BookOpen",
-              "color": "hsl(82, 100%, 55%)",
-              "level": 0,
-              "children": [
-                {
-                  "id": "sociology",
-                  "name": "Sociologia",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "history",
-                  "name": "Historia",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "philosophy",
-                  "name": "Filosofia",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "languages",
-                  "name": "Bilingue",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "communication",
-                  "name": "Comunicacion",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                }
-              ]
-            },
-            {
-              "id": "creativity",
-              "name": "Creatividad & Arte",
-              "icon": "Palette",
-              "color": "hsl(35, 100%, 55%)",
-              "level": 0,
-              "children": [
-                {
-                  "id": "visual-art",
-                  "name": "Arte Visual",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "music",
-                  "name": "Musica",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "design",
-                  "name": "Diseno",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "writing",
-                  "name": "Escritura",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                }
-              ]
-            },
-            {
-              "id": "personal",
-              "name": "Desarrollo Personal",
-              "icon": "Target",
-              "color": "hsl(55, 100%, 55%)",
-              "level": 0,
-              "children": [
-                {
-                  "id": "responsibility",
-                  "name": "Responsabilidad",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "discipline",
-                  "name": "Disciplina",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "productivity",
-                  "name": "Productividad",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "leadership",
-                  "name": "Liderazgo",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                }
-              ]
-            },
-            {
-              "id": "finance",
-              "name": "Finanzas & Exito",
-              "icon": "TrendingUp",
-              "color": "hsl(220, 100%, 60%)",
-              "level": 0,
-              "children": [
-                {
-                  "id": "savings",
-                  "name": "Ahorro",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "investments",
-                  "name": "Inversiones",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "business",
-                  "name": "Negocios",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                },
-                {
-                  "id": "income",
-                  "name": "Ingresos",
-                  "level": 0,
-                  "xpRequired": 1000,
-                  "xpCurrent": 0,
-                  "children": [],
-                  "parentId": null
-                }
-              ]
-            }
-          ],
-          "overallLevel": 0
-        },
-        "tasks": [],
-        "goals": [],
-        "user": {
-          "id": "6e9feaa9-18fa-4162-89a7-fec4c890b48c",
-          "nickname": "CyberRunner",
-          "avatarUrl": null,
-          "level": 1,
-          "totalXp": 0,
-          "joinedAt": "2026-03-07T06:56:13.482Z",
-          "currentStreak": 0,
-          "longestStreak": 0
-        },
-        "settings": {
-          "theme": "cyberpunk",
-          "notificationsEnabled": true,
-          "dailyReminderTime": "08:00",
-          "strictValidation": true,
-          "language": "es"
-        }
-      }
-    }
-  ]
+  }
 }

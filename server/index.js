@@ -1,176 +1,165 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const cors = require('cors')
-const bcrypt = require('bcryptjs')
+/**
+ * Express + Lowdb - Backend API REST
+ * Crea db.json automáticamente si no existe.
+ */
+import express from "express"
+import cors from "cors"
+import bcrypt from "bcryptjs"
+import * as db from "./db-lowdb.js"
 
 const app = express()
-const allowedOrigin = process.env.ALLOWED_ORIGIN || '*'
+const allowedOrigin = process.env.ALLOWED_ORIGIN || "*"
 app.use(cors({ origin: allowedOrigin }))
-app.use(bodyParser.json({ limit: '10mb' }))
+app.use(express.json({ limit: "10mb" }))
 
-// Use MongoDB when MONGODB_URI is set; otherwise file-based db
-const useMongo = !!process.env.MONGODB_URI
-const dbSync = require('./db')
-const dbMongo = useMongo ? require('./db-mongo') : null // lazy: only loads when MONGODB_URI set
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  console.log("[SERVER] GET /api/health - Backend is healthy")
+  res.json({ status: "ok", message: "Backend is running", timestamp: new Date().toISOString() })
+})
 
-function dbGet(collection, id) {
-  return useMongo ? dbMongo.get(collection, id) : Promise.resolve(dbSync.get(collection, id))
-}
-function dbUpsert(collection, item) {
-  return useMongo ? dbMongo.upsert(collection, item) : Promise.resolve(dbSync.upsert(collection, item))
-}
-function dbList(collection) {
-  return useMongo ? dbMongo.list(collection) : Promise.resolve(dbSync.list(collection))
-}
-function dbRemove(collection, id) {
-  return useMongo ? dbMongo.remove(collection, id) : Promise.resolve(dbSync.remove(collection, id))
-}
-function dbGetState() {
-  return useMongo ? dbMongo.getState() : Promise.resolve(dbSync.getState())
-}
-function dbSaveState(state) {
-  return useMongo ? dbMongo.saveState(state) : Promise.resolve(dbSync.saveState(state))
-}
-function dbResetToSeed() {
-  return useMongo ? dbMongo.resetToSeed() : Promise.resolve(dbSync.resetToSeed())
-}
-
-// Accounts login/create endpoint: accepts { id, pin, state?, mode? }
-// mode: 'login' = must exist (fail if not); 'create' = must not exist (fail if exists)
-app.post('/api/accounts/login', async (req, res) => {
+// Accounts login/create
+app.post("/api/accounts/login", async (req, res) => {
   try {
-    const { id, pin, state, mode } = req.body || {}
-    if (!id || !pin) return res.status(400).json({ ok: false, error: 'missing id or pin' })
+    const { id, pin, state, mode } = req.body ?? {}
+    if (!id || !pin) return res.status(400).json({ ok: false, error: "missing id or pin" })
 
     const nid = String(id).trim().toLowerCase()
-
-    console.log('[SERVER] /api/accounts/login request for id=', nid, 'mode=', mode || 'auto')
-    const existing = await dbGet('accounts', nid)
+    console.log("[SERVER] POST /api/accounts/login id=", nid, "mode=", mode || "auto")
+    const existing = await db.get("accounts", nid)
 
     if (existing) {
-      // Si eligió "Crear cuenta" pero la cuenta ya existe -> mensaje claro (antes de verificar PIN)
-      if (mode === 'create') {
-        return res.status(409).json({ ok: false, error: 'account_exists', message: 'Esa cuenta ya existe. Usa Iniciar sesión.' })
+      if (mode === "create") {
+        return res.status(409).json({ ok: false, error: "account_exists", message: "Esa cuenta ya existe. Usa Iniciar sesión." })
       }
-      const hash = existing.pinHash || existing.pin
+      const hash = existing.pinHash ?? existing.pin
       const match = hash ? bcrypt.compareSync(pin, hash) : false
       if (!match) {
-        if (req.body && req.body.force) {
+        if (req.body?.force) {
           const pinHash = bcrypt.hashSync(pin, 10)
-          const acc = { id: nid, pinHash, state: state || existing.state || null }
-          await dbUpsert('accounts', acc)
-          console.log('[SERVER] /api/accounts/login -> force-overwrote account id=', nid)
+          const acc = { id: nid, pinHash, state: state ?? existing.state ?? null }
+          await db.upsert("accounts", acc)
           return res.json({ ok: true, found: false, created: true, replaced: true, state: acc.state })
         }
-        return res.status(401).json({ ok: false, error: 'invalid_pin' })
+        return res.status(401).json({ ok: false, error: "invalid_pin" })
       }
-      console.log('[SERVER] /api/accounts/login -> found account, returning state')
-      return res.json({ ok: true, found: true, created: false, state: existing.state || null })
+      console.log("[SERVER] Account login successful, returning existing state:", existing.state)
+      return res.json({ ok: true, found: true, created: false, state: existing.state ?? null })
     }
 
-    // Account does not exist
-    if (mode === 'login') {
-      return res.status(404).json({ ok: false, error: 'account_not_found', message: 'Cuenta no encontrada. Crea una nueva.' })
+    if (mode === "login") {
+      return res.status(404).json({ ok: false, error: "account_not_found", message: "Cuenta no encontrada. Crea una nueva." })
     }
 
     const pinHash = bcrypt.hashSync(pin, 10)
-    const acc = { id: nid, pinHash, state: state || null }
-    await dbUpsert('accounts', acc)
-    console.log('[SERVER] /api/accounts/login -> created account id=', nid)
+    const acc = { id: nid, pinHash, state: state ?? null }
+    await db.upsert("accounts", acc)
+    console.log("[SERVER] Created account id=", nid, "with initial state", state)
     return res.json({ ok: true, found: false, created: true, state: acc.state })
   } catch (e) {
-    console.error('accounts/login failed', e)
-    return res.status(500).json({ ok: false, error: 'server_error' })
+    console.error("accounts/login failed", e)
+    return res.status(500).json({ ok: false, error: "server_error" })
   }
 })
 
-app.get('/api/state', async (req, res) => {
+app.get("/api/state", async (req, res) => {
   try {
-    const st = await dbGetState()
+    const st = await db.getState()
     res.json(st)
   } catch (e) {
-    console.error('Failed to read state', e)
-    res.status(500).json({ error: 'Failed to read state' })
+    console.error("GET /api/state", e)
+    res.status(500).json({ error: "Failed to read state" })
   }
 })
 
-app.post('/api/state', async (req, res) => {
+app.post("/api/state", async (req, res) => {
   try {
-    await dbSaveState(req.body)
+    await db.saveState(req.body)
     res.json({ ok: true })
   } catch (e) {
-    console.error('Failed to write state', e)
-    res.status(500).json({ error: 'Failed to write state' })
+    console.error("POST /api/state", e)
+    res.status(500).json({ error: "Failed to write state" })
   }
 })
 
-app.get('/api/collections/:name', async (req, res) => {
-  const c = req.params.name
+app.get("/api/collections/:name", async (req, res) => {
   try {
-    console.log('[SERVER] GET /api/collections/', c)
-    let items = await dbList(c)
-    if (c === 'accounts') items = items.filter((i) => i && i.id !== 'simuser')
+    const c = req.params.name
+    let items = await db.list(c)
+    if (c === "accounts") items = items.filter((i) => i && String(i.id).toLowerCase() !== "simuser")
     res.json(items)
   } catch (e) {
-    res.status(500).json({ error: 'failed' })
+    console.error("GET /api/collections", e)
+    res.status(500).json({ error: "failed" })
   }
 })
 
-app.get('/api/collections/:name/:id', async (req, res) => {
-  const { name, id } = req.params
+app.get("/api/collections/:name/:id", async (req, res) => {
   try {
-    if (name === 'accounts' && id === 'simuser') return res.status(404).json({})
-    console.log('[SERVER] GET /api/collections/', name, id)
-    const item = await dbGet(name, id)
+    const { name, id } = req.params
+    if (name === "accounts" && String(id).toLowerCase() === "simuser") {
+      return res.status(404).json({})
+    }
+    const item = await db.get(name, id)
     if (!item) return res.status(404).json({})
     res.json(item)
   } catch (e) {
-    res.status(500).json({ error: 'failed' })
+    console.error("GET /api/collections/:id", e)
+    res.status(500).json({ error: "failed" })
   }
 })
 
-app.post('/api/collections/:name', async (req, res) => {
-  const name = req.params.name
-  const item = req.body
+app.post("/api/collections/:name", async (req, res) => {
   try {
-    if (name === 'accounts' && item && item.id) {
-      item.id = String(item.id).trim().toLowerCase()
-      if (item.id === 'simuser') {
-        await dbRemove(name, item.id)
+    const name = req.params.name
+    let item = req.body
+    if (name === "accounts" && item?.id) {
+      const nid = String(item.id).trim().toLowerCase()
+      if (nid === "simuser") {
+        await db.remove(name, nid)
         return res.json({ ok: true, item: null })
       }
+      // Hash PIN before storing; never persist plain pin
+      if (item.pin) {
+        const pinHash = bcrypt.hashSync(item.pin, 10)
+        item = { ...item, pinHash }
+        delete item.pin
+      }
+      // Normalize the ID
+      item.id = nid
+      console.log("[SERVER] POST /api/collections/accounts saving:", JSON.stringify(item).substring(0, 200))
     }
-    console.log('[SERVER] POST /api/collections/', name, ' id=', item && item.id)
-    const saved = await dbUpsert(name, item)
+    const saved = await db.upsert(name, item)
     res.json({ ok: true, item: saved })
   } catch (e) {
-    res.status(500).json({ error: 'failed' })
+    console.error("POST /api/collections", e)
+    res.status(500).json({ error: "failed" })
   }
 })
 
-app.delete('/api/collections/:name/:id', async (req, res) => {
-  const { name, id } = req.params
+app.delete("/api/collections/:name/:id", async (req, res) => {
   try {
-    await dbRemove(name, id)
+    const { name, id } = req.params
+    await db.remove(name, id)
     res.json({ ok: true })
   } catch (e) {
-    res.status(500).json({ error: 'failed' })
+    console.error("DELETE /api/collections", e)
+    res.status(500).json({ error: "failed" })
   }
 })
 
-app.post('/api/reset', async (req, res) => {
+app.post("/api/reset", async (req, res) => {
   try {
-    console.log('[SERVER] POST /api/reset')
-    const seed = await dbResetToSeed()
+    const seed = await db.resetToSeed()
     res.json({ ok: true, seed })
   } catch (e) {
-    res.status(500).json({ error: 'failed to reset' })
+    console.error("POST /api/reset", e)
+    res.status(500).json({ error: "failed to reset" })
   }
 })
 
 const PORT = process.env.PORT || 4001
-app.listen(PORT, () => {
-  const mode = useMongo ? 'MongoDB' : 'file-based (state.json)'
-  console.log(`Backend running on http://localhost:${PORT} [${mode}]`)
-  if (useMongo) console.log('  Tip: unset MONGODB_URI to use local file storage instead')
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend Express+Lowdb on http://0.0.0.0:${PORT} [db.json]`)
+  console.log(`Accessible from network at: http://YOUR_IP:${PORT}`)
 })

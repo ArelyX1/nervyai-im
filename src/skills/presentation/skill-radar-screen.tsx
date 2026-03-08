@@ -482,7 +482,8 @@ function DrillDownView({
                     const pct = totalRequired > 0 ? (totalCurrent / totalRequired) * 100 : 0
                     return (
                       <>
-                        <p className="font-mono text-[10px] text-muted-foreground">{totalCurrent}/{totalRequired} XP (agregado)</p>
+                        <p className="font-mono text-[10px] text-muted-foreground">{totalCurrent}/{totalRequired} XP (ag
+                          regado)</p>
                         <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: colors.hex }} />
                         </div>
