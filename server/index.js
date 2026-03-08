@@ -8,8 +8,7 @@ import bcrypt from "bcryptjs"
 import * as db from "./db-lowdb.js"
 
 const app = express()
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "*"
-app.use(cors({ origin: allowedOrigin }))
+app.use(cors({ origin: '*' }))
 app.use(express.json({ limit: "10mb" }))
 
 // Health check endpoint

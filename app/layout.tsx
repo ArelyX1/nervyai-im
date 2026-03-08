@@ -32,8 +32,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Get backend URL from environment variable (set during Docker/K8s build or at runtime)
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
+  
   return (
     <html lang="es" className="dark">
+      <head>
+        {/* Meta tag for backend URL - can be overridden at container runtime */}
+        {backendUrl && <meta name="backend-url" content={backendUrl} />}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}
       >
