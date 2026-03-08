@@ -210,16 +210,26 @@ export function useAppStore(): AppStore {
       // If an account is selected, fetch its state from accounts collection
       const acct = typeof window !== 'undefined' ? localStorage.getItem('accountId') : null
       const endpoint = acct ? `${url}/collections/accounts/${encodeURIComponent(acct)}` : `${url}/state`
-      console.debug('[CLIENT] fetchFromServer ->', endpoint)
+      console.log('[FETCH] Requesting state from:', endpoint)
       const res = await fetch(endpoint)
-      if (!res.ok) return null
+      if (!res.ok) {
+        console.error('[FETCH] ❌ HTTP Error:', res.status, res.statusText, '- Backend may be down or wrong URL')
+        return null
+      }
       const json = await res.json()
-      console.debug('[CLIENT] fetchFromServer response', json)
+      console.log('[FETCH] ✅ Success: received', Object.keys(json).join(', '))
       // if endpoint returned account wrapper, extract .state
       if (json && json.state) return json.state
       return json
     } catch (e) {
-      console.warn('fetchFromServer failed', e)
+      const errMsg = e instanceof TypeError ? e.message : String(e)
+      if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
+        console.error('[FETCH] ❌ Network Error - CORS blocked or backend unreachable at:', getBackendUrl())
+      } else if (errMsg.includes('JSON')) {
+        console.error('[FETCH] ❌ Invalid JSON response - backend sent malformed data')
+      } else {
+        console.error('[FETCH] ❌ Error:', errMsg)
+      }
       return null
     }
   }
@@ -230,33 +240,41 @@ export function useAppStore(): AppStore {
       const acct = typeof window !== 'undefined' ? localStorage.getItem('accountId') : null
       if (acct) {
         // upsert account with its state (don't send pin on every autosave - only send it if changing)
-        console.debug('[CLIENT] saveToServer -> upsert account', acct, 'with state')
+        console.log('[SAVE] Autosaving to account:', acct)
         const response = await fetch(`${url}/collections/accounts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: acct, state }),
         })
         if (!response.ok) {
-          console.warn('[CLIENT] saveToServer account failed:', response.status, response.statusText)
+          console.error('[SAVE] ❌ HTTP', response.status, response.statusText, '- Backend rejected save')
           return false
         }
-        console.debug('[CLIENT] saveToServer account success')
+        console.log('[SAVE] ✅ Account state saved successfully')
         return true
       }
-      console.debug('[CLIENT] saveToServer -> saving state to', `${url}/state`)
+      console.log('[SAVE] Saving state to:', `${url}/state`)
       const response = await fetch(`${url}/state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(state),
       })
       if (!response.ok) {
-        console.warn('[CLIENT] saveToServer state failed:', response.status, response.statusText)
+        console.error('[SAVE] ❌ HTTP', response.status, response.statusText, '- Backend rejected save')
         return false
       }
-      console.debug('[CLIENT] saveToServer state success')
+      console.log('[SAVE] ✅ State saved successfully')
       return true
     } catch (e) {
-      console.warn('[CLIENT] saveToServer error:', e)
+      const errMsg = e instanceof TypeError ? e.message : String(e)
+      if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
+        console.error('[SAVE] ❌ Network Error - CORS blocked or backend unreachable')
+        console.error('    Attempted URL:', getBackendUrl())
+        console.error('    Your backend should be at: http://app.neravy.us:4001/api')
+        console.error('    Or set localStorage.setItem("backendUrl", "http://YOUR_BACKEND:4001/api")')
+      } else {
+        console.error('[SAVE] ❌ Error:', errMsg)
+      }
       return false
     }
   }
@@ -288,7 +306,7 @@ export function useAppStore(): AppStore {
       try {
         const url = backendUrl.replace(/\/$/, '') // strip trailing slash
         const state = { skills: skillsAdapter.getSkillRadar(), tasks: tasksAdapter.getAllTasks(), goals: goalsAdapter.getAllGoals(), user, settings }
-        console.debug('[CLIENT] loginAccount -> POST', `${url}/accounts/login`, ' id=', username, ' mode=', mode)
+        console.log('[LOGIN] Attempting login at:', `${url}/accounts/login`, 'username:', username, 'mode:', mode || 'auto')
         const res = await fetch(`${url}/accounts/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -296,15 +314,19 @@ export function useAppStore(): AppStore {
         })
         if (!res.ok) {
           const json = await res.json().catch(() => ({}))
-          console.warn('[CLIENT] loginAccount failed response:', json)
-          return { ok: false, error: json.error || 'login_failed' }
+          const errorMsg = json.error || 'login_failed'
+          console.error('[LOGIN] ❌ HTTP', res.status, res.statusText, '- Error:', errorMsg)
+          if (res.status === 401) console.error('    → PIN is incorrect')
+          if (res.status === 404) console.error('    → Account not found. Try "Create" instead of "Login"')
+          if (res.status === 409) console.error('    → Account already exists. Try "Login" instead of "Create"')
+          return { ok: false, error: errorMsg }
         }
         const json = await res.json()
-        console.debug('[CLIENT] loginAccount response', json)
+        console.log('[LOGIN] ✅ Response received:', json.ok ? '✓ Success' : '✗ Failed')
         if (json && json.ok) {
           // apply returned state and sync to adapters so save/refresh use correct data
           if (json.state) {
-            console.debug('[CLIENT] loginAccount: applying returned state', json.state)
+            console.log('[LOGIN] Applying received state')
             if (json.state.skills) {
               setSkills(json.state.skills)
               ;(skillsAdapter as any).loadSkillRadar?.(json.state.skills)
@@ -325,13 +347,20 @@ export function useAppStore(): AppStore {
           localStorage.setItem('accountId', nid)
           localStorage.setItem('accountPin', pin)
           setAccountId(nid)
-          console.debug('[CLIENT] loginAccount -> stored accountId=', nid)
+          console.log('[LOGIN] ✅ Account logged in:', nid)
           return { ok: true, found: !!json.found, created: !!json.created }
         }
-        console.warn('[CLIENT] loginAccount: ok was false in response')
+        console.error('[LOGIN] ❌ Server returned ok: false')
         return { ok: false }
       } catch (e) {
-        console.warn('[CLIENT] loginAccount failed (backend)', e)
+        const errMsg = e instanceof TypeError ? e.message : String(e)
+        if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
+          console.error('[LOGIN] ❌ Network Error - CORS blocked or backend unreachable')
+          console.error('    Backend URL:', backendUrl)
+          console.error('    Check that backend is running on:', backendUrl.replace('/api', ''))
+        } else {
+          console.error('[LOGIN] ❌ Error:', errMsg)
+        }
         // fallthrough to local account fallback if backend fails
       }
     }

@@ -84,40 +84,62 @@ export default function Page() {
 
 function BackendHealthCheck() {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking')
+  const [backendUrl, setBackendUrl] = useState<string>('')
 
   React.useEffect(() => {
     const checkBackend = async () => {
-      const backendUrl = `http://${window.location.hostname}:4001/api/health`
-      console.log('[HEALTH] Checking backend at', backendUrl)
+      // Try to detect backend URL same way as useAppStore
+      let url = localStorage.getItem('backendUrl')
+      if (!url) {
+        const hostname = window.location.hostname
+        if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+          url = `http://${hostname}:4001/api/health`
+        } else {
+          url = `http://app.neravy.us:4001/api/health`
+        }
+      } else {
+        url = url + '/health'
+      }
+      
+      setBackendUrl(url)
+      console.log('[HEALTH] Checking:', url)
+      
       try {
-        const res = await fetch(backendUrl, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        })
+        const res = await fetch(url)
         if (res.ok) {
-          console.log('[HEALTH] Backend is online ✅')
+          console.log('[HEALTH] ✅ Backend online:', url)
           setBackendStatus('online')
         } else {
-          console.log('[HEALTH] Backend responded but not OK:', res.status)
+          console.error('[HEALTH] ❌ HTTP', res.status, res.statusText, 'from:', url)
           setBackendStatus('offline')
         }
       } catch (err) {
-        console.log('[HEALTH] Backend connection failed:', err)
+        const errMsg = err instanceof Error ? err.message : String(err)
+        if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
+          console.error('[HEALTH] ❌ Network Error (CORS?) - Backend may be down or wrong URL:', url)
+        } else {
+          console.error('[HEALTH] ❌ Connection failed:', errMsg)
+        }
         setBackendStatus('offline')
       }
     }
 
     checkBackend()
-    const interval = setInterval(checkBackend, 5000) // Check every 5 seconds
+    const interval = setInterval(checkBackend, 5000)
     return () => clearInterval(interval)
   }, [])
 
   const statusColor = backendStatus === 'online' ? 'text-neon-cyan' : backendStatus === 'offline' ? 'text-neon-magenta' : 'text-yellow-400'
-  const statusText = backendStatus === 'online' ? 'Backend ✅' : backendStatus === 'offline' ? 'Backend ❌' : 'Verificando...'
+  const statusText = backendStatus === 'online' ? '✅ Backend Online' : backendStatus === 'offline' ? '❌ Backend Offline' : '⏳ Checking...'
 
   return (
     <div className={`font-mono text-xs ${statusColor} mb-4`}>
       {statusText}
+      {backendStatus === 'offline' && backendUrl && (
+        <div className="text-xs text-muted-foreground mt-1">
+          Tried: {backendUrl}
+        </div>
+      )}
     </div>
   )
 }
