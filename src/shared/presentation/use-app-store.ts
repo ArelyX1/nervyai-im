@@ -193,8 +193,16 @@ export function useAppStore(): AppStore {
 
   function getBackendUrl(): string {
     if (typeof window === "undefined") return "/api"
-    const stored = localStorage.getItem("backendUrl")
-    if (stored && stored.trim().length > 0) return stored
+    let stored = localStorage.getItem("backendUrl")
+    if (stored && stored.trim().length > 0) {
+      // migrate old value if it still uses port 4001 on production host
+      if (stored.includes("app.neravy.us:4001")) {
+        stored = stored.replace(/:4001/g, ":80")
+        localStorage.setItem("backendUrl", stored)
+        console.warn('[CLIENT] Migrated stored backendUrl to port 80:', stored)
+      }
+      return stored
+    }
     const def = getDefaultBackendUrl()
     return def || "/api"
   }
