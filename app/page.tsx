@@ -177,6 +177,9 @@ function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="text-center text-xs text-muted-foreground mb-2">
+        Version 1.5.0
+      </div>
       <BackendHealthCheck />
       {/* Tabs: Iniciar sesión / Crear cuenta */}
       <div className="flex gap-2 rounded-lg bg-surface-3 p-1">
