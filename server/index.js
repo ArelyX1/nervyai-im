@@ -20,14 +20,14 @@ app.use((req, res, next) => {
 })
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
+app.get("/health", (req, res) => {
   const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown'
-  console.log(`[HEALTH] ✅ GET /api/health from ${clientIP} - Backend is healthy`)
+  console.log(`[HEALTH] ✅ GET /health from ${clientIP} - Backend is healthy`)
   res.json({ status: "ok", message: "Backend is running", timestamp: new Date().toISOString(), clientIP })
 })
 
 // Accounts login/create
-app.post("/api/accounts/login", async (req, res) => {
+app.post("/accounts/login", async (req, res) => {
   try {
     const { id, pin, state, mode } = req.body ?? {}
     if (!id || !pin) {
@@ -77,7 +77,7 @@ app.post("/api/accounts/login", async (req, res) => {
   }
 })
 
-app.get("/api/state", async (req, res) => {
+app.get("/state", async (req, res) => {
   try {
     const st = await db.getState()
     console.log("[STATE] ✅ GET /api/state - returning:", Object.keys(st).join(", "))
@@ -88,7 +88,7 @@ app.get("/api/state", async (req, res) => {
   }
 })
 
-app.post("/api/state", async (req, res) => {
+app.post("/state", async (req, res) => {
   try {
     await db.saveState(req.body)
     console.log("[STATE] ✅ POST /api/state - saved successfully")
@@ -99,7 +99,7 @@ app.post("/api/state", async (req, res) => {
   }
 })
 
-app.get("/api/collections/:name", async (req, res) => {
+app.get("/collections/:name", async (req, res) => {
   try {
     const c = req.params.name
     let items = await db.list(c)
@@ -112,7 +112,7 @@ app.get("/api/collections/:name", async (req, res) => {
   }
 })
 
-app.get("/api/collections/:name/:id", async (req, res) => {
+app.get("/collections/:name/:id", async (req, res) => {
   try {
     const { name, id } = req.params
     if (name === "accounts" && String(id).toLowerCase() === "simuser") {
@@ -132,7 +132,7 @@ app.get("/api/collections/:name/:id", async (req, res) => {
   }
 })
 
-app.post("/api/collections/:name", async (req, res) => {
+app.post("/collections/:name", async (req, res) => {
   try {
     const name = req.params.name
     let item = req.body
@@ -161,7 +161,7 @@ app.post("/api/collections/:name", async (req, res) => {
   }
 })
 
-app.delete("/api/collections/:name/:id", async (req, res) => {
+app.delete("/collections/:name/:id", async (req, res) => {
   try {
     const { name, id } = req.params
     await db.remove(name, id)
@@ -173,7 +173,7 @@ app.delete("/api/collections/:name/:id", async (req, res) => {
   }
 })
 
-app.post("/api/reset", async (req, res) => {
+app.post("/reset", async (req, res) => {
   try {
     const seed = await db.resetToSeed()
     console.log("[RESET] ✅ POST /api/reset - data reset to seed")

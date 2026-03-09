@@ -166,11 +166,11 @@ export function useAppStore(): AppStore {
       }
 
       // For Cloudflare/DNS-based routing with subdomain pattern
-      // If frontend is at: app.neravy.us → backend is at: api.neravy.us (same protocol)
+      // If frontend is at: app.neravy.us → backend is at: app.neravy.us (same domain, tunnel routes /api to backend)
       if (hostname === "app.neravy.us") {
         const protocol = window.location?.protocol || "https:"
-        const backendUrl = `${protocol}//api.neravy.us/api`
-        console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare subdomain URL=', backendUrl, 'protocol=', protocol)
+        const backendUrl = `${protocol}//app.neravy.us`
+        console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare same domain URL=', backendUrl, 'protocol=', protocol)
         return backendUrl
       }
 
@@ -201,6 +201,16 @@ export function useAppStore(): AppStore {
         stored = stored.replace(/:4001/g, ":80")
         localStorage.setItem("backendUrl", stored)
         console.warn('[CLIENT] Migrated stored backendUrl to port 80:', stored)
+      }
+      // migrate old URLs that used /api suffix or api subdomain
+      if (stored.includes("api.neravy.us/api")) {
+        stored = stored.replace("api.neravy.us/api", "app.neravy.us")
+        localStorage.setItem("backendUrl", stored)
+        console.warn('[CLIENT] Migrated stored backendUrl from api subdomain to app domain:', stored)
+      } else if (stored.endsWith("/api")) {
+        stored = stored.replace(/\/api$/, "")
+        localStorage.setItem("backendUrl", stored)
+        console.warn('[CLIENT] Migrated stored backendUrl by removing /api suffix:', stored)
       }
       return stored
     }
@@ -286,8 +296,8 @@ export function useAppStore(): AppStore {
       if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
         console.error('[SAVE] ❌ Network Error - CORS blocked or backend unreachable')
         console.error('    Attempted URL:', getBackendUrl())
-        console.error('    Your backend should be at: http://api.neravy.us/api')
-        console.error('    Or set localStorage.setItem("backendUrl", "http://YOUR_BACKEND/api")')
+        console.error('    Your backend should be at: https://app.neravy.us')
+        console.error('    Or set localStorage.setItem("backendUrl", "https://app.neravy.us")')
       } else {
         console.error('[SAVE] ❌ Error:', errMsg)
       }
