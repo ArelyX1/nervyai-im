@@ -103,8 +103,6 @@ function BackendHealthCheck() {
       } else {
         url = url + '/health'
       }
-        url = url + '/health'
-      }
       
       setBackendUrl(url)
       console.log('[HEALTH] Checking:', url)
