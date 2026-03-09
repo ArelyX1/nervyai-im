@@ -166,10 +166,11 @@ export function useAppStore(): AppStore {
       }
 
       // For Cloudflare/DNS-based routing with subdomain pattern
-      // If frontend is at: app.neravy.us → backend is at: api.neravy.us (port 80)
+      // If frontend is at: app.neravy.us → backend is at: api.neravy.us (same protocol)
       if (hostname === "app.neravy.us") {
-        const backendUrl = `http://api.neravy.us/api`
-        console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare subdomain URL=', backendUrl)
+        const protocol = window.location?.protocol || "https:"
+        const backendUrl = `${protocol}//api.neravy.us/api`
+        console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare subdomain URL=', backendUrl, 'protocol=', protocol)
         return backendUrl
       }
 
