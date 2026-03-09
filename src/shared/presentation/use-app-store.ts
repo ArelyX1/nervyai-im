@@ -166,9 +166,9 @@ export function useAppStore(): AppStore {
       }
 
       // For Cloudflare/DNS-based routing with subdomain pattern
-      // If frontend is at: app.neravy.us → backend is at: api.neravy.us
+      // If frontend is at: app.neravy.us → backend is at: api.neravy.us (port 80)
       if (hostname === "app.neravy.us") {
-        const backendUrl = `http://api.neravy.us:4001/api`
+        const backendUrl = `http://api.neravy.us/api`
         console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare subdomain URL=', backendUrl)
         return backendUrl
       }
@@ -277,8 +277,8 @@ export function useAppStore(): AppStore {
       if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
         console.error('[SAVE] ❌ Network Error - CORS blocked or backend unreachable')
         console.error('    Attempted URL:', getBackendUrl())
-        console.error('    Your backend should be at: http://app.neravy.us:4001/api')
-        console.error('    Or set localStorage.setItem("backendUrl", "http://YOUR_BACKEND:4001/api")')
+        console.error('    Your backend should be at: http://api.neravy.us/api')
+        console.error('    Or set localStorage.setItem("backendUrl", "http://YOUR_BACKEND/api")')
       } else {
         console.error('[SAVE] ❌ Error:', errMsg)
       }

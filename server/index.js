@@ -184,7 +184,7 @@ app.post("/api/reset", async (req, res) => {
   }
 })
 
-const PORT = process.env.PORT || 4001
+const PORT = process.env.PORT || 80
 const HOST = process.env.HOST || '0.0.0.0'
 
 app.listen(PORT, HOST, () => {
