@@ -144,7 +144,7 @@ export function useAppStore(): AppStore {
                           (hostname?.startsWith("172.") && parseInt(hostname.split(".")[1]) >= 16 && parseInt(hostname.split(".")[1]) <= 31)
 
     if (isLocalNetwork) {
-      const backendUrl = `http://${hostname}:4001/api`
+      const backendUrl = `http://${hostname}:4001`
       console.debug('[CLIENT] getDefaultBackendUrl: using backend URL (local network)=', backendUrl)
       return backendUrl
     }
@@ -160,7 +160,7 @@ export function useAppStore(): AppStore {
       if (hostname.includes(".svc.cluster.local")) {
         const parts = hostname.split(".")
         const backendHostname = `${parts[0].replace("frontend", "backend")}.${parts.slice(1).join(".")}`
-        const backendUrl = `http://${backendHostname}:4001/api`
+        const backendUrl = `http://${backendHostname}:4001`
         console.debug('[CLIENT] getDefaultBackendUrl: K8s service name URL=', backendUrl)
         return backendUrl
       }

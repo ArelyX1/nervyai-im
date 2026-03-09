@@ -93,12 +93,12 @@ function BackendHealthCheck() {
       if (!url) {
         const hostname = window.location.hostname
         if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
-          url = `http://${hostname}:4001/api/health`
+          url = `http://${hostname}:4001/health`
         } else if (hostname === 'app.neravy.us') {
           const protocol = window.location?.protocol || "https:"
-          url = `${protocol}//api.neravy.us/api/health`
+          url = `${protocol}//app.neravy.us/health`
         } else {
-          url = `http://app.neravy.us:4001/api/health`
+          url = `http://app.neravy.us:4001/health`
         }
       } else {
         url = url + '/health'
