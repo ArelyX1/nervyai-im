@@ -116,10 +116,8 @@ export function useAppStore(): AppStore {
   // Backend sync helpers (optional)
   function getDefaultBackendUrl(): string | null {
     if (typeof window === "undefined") return null
-    const hostname = window.location?.hostname
-    console.debug('[CLIENT] getDefaultBackendUrl: hostname=', hostname)
 
-    // Priority 1: Check if explicitly set via environment variable (for K8s/Docker)
+    // Priority 1: Check if explicitly set via environment variable (for Docker/other envs)
     // This is injected at build time or runtime via meta tag
     // Usage: <meta name="backend-url" content="https://api.example.com">
     if (typeof document !== "undefined") {
@@ -137,58 +135,8 @@ export function useAppStore(): AppStore {
       return stored
     }
 
-    // Priority 3: Check if it's localhost or a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-    const isLocalNetwork = hostname === "localhost" ||
-                          hostname?.startsWith("192.168.") ||
-                          hostname?.startsWith("10.") ||
-                          (hostname?.startsWith("172.") && parseInt(hostname.split(".")[1]) >= 16 && parseInt(hostname.split(".")[1]) <= 31)
-
-    if (isLocalNetwork) {
-      const backendUrl = `http://${hostname}:4001`
-      console.debug('[CLIENT] getDefaultBackendUrl: using backend URL (local network)=', backendUrl)
-      return backendUrl
-    }
-
-    // Priority 4: For external URLs, try to infer backend URL from frontend URL
-    // If frontend is at: my-app.example.com → backend is at: api.example.com
-    // If frontend is at: example.com:30002 → backend is at: example.com:40013
-    // For K8s/Cloudflare: if frontend is at app.neravy.us → backend is at api.neravy.us
-    if (hostname && !hostname.includes("localhost")) {
-      // For K8s with service name routing
-      // If hostname is like "app-frontend.default.svc.cluster.local"
-      // Try "app-backend.default.svc.cluster.local"
-      if (hostname.includes(".svc.cluster.local")) {
-        const parts = hostname.split(".")
-        const backendHostname = `${parts[0].replace("frontend", "backend")}.${parts.slice(1).join(".")}`
-        const backendUrl = `http://${backendHostname}:4001`
-        console.debug('[CLIENT] getDefaultBackendUrl: K8s service name URL=', backendUrl)
-        return backendUrl
-      }
-
-      // For Cloudflare/DNS-based routing with subdomain pattern
-      // If frontend is at: app.neravy.us → backend is at: app.neravy.us (same domain, tunnel routes /api to backend)
-      if (hostname === "app.neravy.us") {
-        const protocol = window.location?.protocol || "https:"
-        const backendUrl = `${protocol}//app.neravy.us`
-        console.debug('[CLIENT] getDefaultBackendUrl: Cloudflare same domain URL=', backendUrl, 'protocol=', protocol)
-        return backendUrl
-      }
-
-      // If frontend is at: frontend.example.com → backend is at: backend.example.com or api.example.com
-      if (hostname.startsWith("frontend")) {
-        const backendUrl = `${protocol}//backend.${hostname.substring("frontend.".length)}`
-        console.debug('[CLIENT] getDefaultBackendUrl: DNS subdomain URL=', backendUrl)
-        return backendUrl
-      }
-      if (hostname.startsWith("app")) {
-        const backendUrl = `${protocol}//api.${hostname.substring("app.".length)}`
-        console.debug('[CLIENT] getDefaultBackendUrl: DNS api subdomain URL=', backendUrl)
-        return backendUrl
-      }
-    }
-
-    // Priority 5: Fallback to Next.js API routes (backend needs to be behind same domain/port)
-    console.debug('[CLIENT] getDefaultBackendUrl: fallback to Next.js API routes')
+    // Priority 3: Default to same-origin Next.js API routes
+    console.debug('[CLIENT] getDefaultBackendUrl: using same-origin /api base path')
     return "/api"
   }
 
@@ -383,7 +331,6 @@ export function useAppStore(): AppStore {
         if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
           console.error('[LOGIN] ❌ Network Error - CORS blocked or backend unreachable')
           console.error('    Backend URL:', backendUrl)
-          console.error('    Check that backend is running on:', backendUrl.replace('/api', ''))
         } else {
           console.error('[LOGIN] ❌ Error:', errMsg)
         }

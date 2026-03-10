@@ -91,17 +91,9 @@ function BackendHealthCheck() {
       // Use same logic as useAppStore for URL detection
       let url = localStorage.getItem('backendUrl')
       if (!url) {
-        const hostname = window.location.hostname
-        if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
-          url = `http://${hostname}:4001/health`
-        } else if (hostname === 'app.neravy.us') {
-          const protocol = window.location?.protocol || "https:"
-          url = `${protocol}//app.neravy.us/health`
-        } else {
-          url = `http://app.neravy.us:4001/health`
-        }
+        url = '/api/health'
       } else {
-        url = url + '/health'
+        url = url.replace(/\/$/, '') + '/health'
       }
       
       setBackendUrl(url)
