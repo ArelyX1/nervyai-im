@@ -377,7 +377,7 @@
               "name": "Intelecto & Ciencia",
               "icon": "Brain",
               "color": "hsl(185, 100%, 50%)",
-              "level": 2,
+              "level": 1,
               "children": [
                 {
                   "id": "physics",
@@ -393,8 +393,27 @@
                   "name": "Matematicas",
                   "level": 10,
                   "xpRequired": 1000,
-                  "xpCurrent": 100,
-                  "children": [],
+                  "xpCurrent": 0,
+                  "children": [
+                    {
+                      "id": "trans-7f07a008-15ce-4a56-b390-dba34ed70388",
+                      "name": "Matematicas — General",
+                      "level": 0,
+                      "xpRequired": 1000,
+                      "xpCurrent": 50,
+                      "children": [],
+                      "parentId": "math"
+                    },
+                    {
+                      "id": "00a835b7-93e3-440a-84b9-5dad2181c527",
+                      "name": "Estadistica",
+                      "level": 5,
+                      "xpRequired": 1000,
+                      "xpCurrent": 50,
+                      "children": [],
+                      "parentId": "math"
+                    }
+                  ],
                   "parentId": null
                 },
                 {
@@ -584,6 +603,34 @@
                       "xpCurrent": 0,
                       "children": [],
                       "parentId": "visual-art"
+                    },
+                    {
+                      "id": "2763c4b5-418c-48c3-8753-ffeb41fe10f8",
+                      "name": "Dibujo",
+                      "level": 2,
+                      "xpRequired": 1000,
+                      "xpCurrent": 0,
+                      "children": [
+                        {
+                          "id": "trans-0e9099eb-6895-45e8-8cbd-9f29cccf8ed3",
+                          "name": "Dibujo — General",
+                          "level": 0,
+                          "xpRequired": 1000,
+                          "xpCurrent": 0,
+                          "children": [],
+                          "parentId": "2763c4b5-418c-48c3-8753-ffeb41fe10f8"
+                        },
+                        {
+                          "id": "e6b4af4e-5228-475c-bf7f-3b4e474eafbb",
+                          "name": "Anatomia",
+                          "level": 2,
+                          "xpRequired": 1000,
+                          "xpCurrent": 15,
+                          "children": [],
+                          "parentId": "2763c4b5-418c-48c3-8753-ffeb41fe10f8"
+                        }
+                      ],
+                      "parentId": "visual-art"
                     }
                   ],
                   "parentId": null
@@ -729,18 +776,34 @@
             "skillCategoryId": "creativity",
             "subSkillId": "cfd73170-1fc2-4f6c-8a37-861f576001b0",
             "dueDate": "2026-03-08"
+          },
+          {
+            "id": "504b8f68-3881-41f1-a17d-8cab7f8e5f5e",
+            "description": "",
+            "frequency": "daily",
+            "priority": "medium",
+            "status": "completed",
+            "validationRule": "manual-confirm",
+            "xpReward": 15,
+            "createdAt": "2026-03-10T17:19:57.871Z",
+            "tags": [],
+            "streak": 1,
+            "title": "Dibujar Logo",
+            "skillCategoryId": "creativity",
+            "subSkillId": "2763c4b5-418c-48c3-8753-ffeb41fe10f8",
+            "completedAt": "2026-03-10T17:20:00.286Z"
           }
         ],
         "goals": [],
         "user": {
           "id": "user-1",
-          "nickname": "CyberRunner",
+          "nickname": "ArelyXl",
           "avatarUrl": null,
           "level": 1,
-          "totalXp": 100,
+          "totalXp": 115,
           "joinedAt": "2026-01-01T00:00:00.000Z",
-          "currentStreak": 1,
-          "longestStreak": 1
+          "currentStreak": 2,
+          "longestStreak": 2
         },
         "settings": {
           "theme": "cyberpunk",

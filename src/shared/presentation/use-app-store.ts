@@ -270,7 +270,17 @@ export function useAppStore(): AppStore {
   }
 
     // Exposed immediate save helper — use current React state so saved data is correct
-    async function saveNow() {
+    // helper used by most actions to persist whatever is currently in the store
+  function persistState() {
+    const s = stateRef.current
+    try { saveToStorage(s) } catch (_) {}
+    if (useBackendEnabled()) {
+      // fire-and-forget; don't need to await inside callbacks
+      saveToServer(s).catch(() => {})
+    }
+  }
+
+  async function saveNow() {
       try {
         const state = stateRef.current
         console.debug('[CLIENT] saveNow triggered', state)
@@ -522,9 +532,7 @@ export function useAppStore(): AppStore {
     tasksAdapter.addTask(task)
     const t = tasksAdapter.getAllTasks()
     setTasks(t)
-    const state = { skills, tasks: t, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [])
 
   const completeTask = useCallback((id: string) => {
@@ -569,27 +577,21 @@ export function useAppStore(): AppStore {
     refresh()
     
     // IMMEDIATELY SAVE
-    const state = { skills: newSkills, tasks: tasksAdapter.getAllTasks(), goals: goalsAdapter.getAllGoals(), user: newUser, settings }
-    try { saveToStorage(state) } catch (_) {}
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [settings])
 
   const deleteTask = useCallback((id: string) => {
     tasksAdapter.deleteTask(id)
     const t = tasksAdapter.getAllTasks()
     setTasks(t)
-    const state = { skills, tasks: t, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [])
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     tasksAdapter.updateTask(id, updates)
     const t = tasksAdapter.getAllTasks()
     setTasks(t)
-    const state = { skills, tasks: t, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [])
 
   // ─── GOAL ACTIONS ──────────────────────────
@@ -599,9 +601,7 @@ export function useAppStore(): AppStore {
     goalsAdapter.addGoal(goal)
     const g = goalsAdapter.getAllGoals()
     setGoals(g)
-    const state = { skills, tasks, goals: g, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
     toast.success("Objetivo agregado", { description: data.title })
   }, [])
 
@@ -609,9 +609,7 @@ export function useAppStore(): AppStore {
     goalsAdapter.deleteGoal(id)
     const g = goalsAdapter.getAllGoals()
     setGoals(g)
-    const state = { skills, tasks, goals: g, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [])
 
   const logDailyGoalProgress = useCallback((goalId: string, date: string, note?: string) => {
@@ -674,9 +672,11 @@ export function useAppStore(): AppStore {
     // use the updated snapshots if we modified them
     const finalSkills = skillsAdapter.getSkillRadar()
     const finalStateUser = typeof finalUser !== 'undefined' ? finalUser : user
-    const state = { skills: finalSkills, tasks, goals: g, user: finalStateUser, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    // update local copies so stateRef is correct
+    setSkills(finalSkills)
+    setUser(finalStateUser)
+    setGoals(g)
+    persistState()
   }, [])
 
   // ─── SKILL CRUD ACTIONS ────────────────────
@@ -684,43 +684,33 @@ export function useAppStore(): AppStore {
   const addCategory = useCallback((name: string, icon: string, color: string) => {
     const snap = skillsAdapter.addCategory(name, icon, color)
     setSkills(snap)
-    const state = { skills: snap, tasks, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [])
 
   const removeCategory = useCallback((categoryId: string) => {
     const snap = skillsAdapter.removeCategory(categoryId)
     setSkills(snap)
-    const state = { skills: snap, tasks, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
   }, [])
 
   const addSkillNode = useCallback((categoryId: string, parentNodeId: string | null, name: string) => {
     const snapshot = skillsAdapter.addSkillNode(categoryId, parentNodeId, name)
     setSkills(snapshot)
-    const state = { skills: snapshot, tasks, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
     return snapshot
   }, [])
 
   const removeSkillNode = useCallback((categoryId: string, nodeId: string) => {
     const snapshot = skillsAdapter.removeSkillNode(categoryId, nodeId)
     setSkills(snapshot)
-    const state = { skills: snapshot, tasks, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
     return snapshot
   }, [])
 
   const distributeTransitionXp = useCallback((categoryId: string, parentNodeId: string, allocations: { nodeId: string; xp: number }[]) => {
     const snapshot = skillsAdapter.distributeTransitionXp(categoryId, parentNodeId, allocations)
     setSkills(snapshot)
-    const state = { skills: snapshot, tasks, goals, user, settings }
-    saveToStorage(state)
-    if (useBackendEnabled()) saveToServer(state)
+    persistState()
     return snapshot
   }, [])
   
@@ -728,9 +718,7 @@ export function useAppStore(): AppStore {
       // Calls adapter helper to distribute transition XP equally across children
         const snapshot = (skillsAdapter as any).distributeTransitionEqually(categoryId, parentNodeId)
         setSkills(snapshot)
-        const state = { skills: snapshot, tasks, goals, user, settings }
-        saveToStorage(state)
-        if (useBackendEnabled()) saveToServer(state)
+        persistState()
         return snapshot
     }, [])
 
@@ -787,11 +775,20 @@ export function useAppStore(): AppStore {
   // ─── USER ACTIONS ──────────────────────────
 
   const updateUser = useCallback((updates: Partial<UserProfile>) => {
-    setUser((prev) => ({ ...prev, ...updates }))
+    setUser((prev) => {
+      const next = { ...prev, ...updates }
+      // persist after the state update
+      setTimeout(persistState, 0)
+      return next
+    })
   }, [])
 
   const updateSettings = useCallback((updates: Partial<UserSettings>) => {
-    setSettings((prev) => ({ ...prev, ...updates }))
+    setSettings((prev) => {
+      const next = { ...prev, ...updates }
+      setTimeout(persistState, 0)
+      return next
+    })
   }, [])
 
   return {
