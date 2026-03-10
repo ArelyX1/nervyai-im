@@ -19,10 +19,15 @@ app.use((req, res, next) => {
   next()
 })
 
-// Health check endpoint
+// Health check endpoints
 app.get("/health", (req, res) => {
   const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown'
   console.log(`[HEALTH] ✅ GET /health from ${clientIP} - Backend is healthy`)
+  res.json({ status: "ok", message: "Backend is running", timestamp: new Date().toISOString(), clientIP })
+})
+app.get("/api/health", (req, res) => {
+  const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown'
+  console.log(`[HEALTH] ✅ GET /api/health from ${clientIP} - Backend is healthy`)
   res.json({ status: "ok", message: "Backend is running", timestamp: new Date().toISOString(), clientIP })
 })
 
@@ -76,6 +81,14 @@ app.post("/accounts/login", async (req, res) => {
     return res.status(500).json({ ok: false, error: "server_error" })
   }
 })
+app.post("/api/accounts/login", async (req, res) => {
+  // Delegate to same handler as /accounts/login
+  return app._router.handle(
+    { ...req, url: "/accounts/login", originalUrl: "/accounts/login" },
+    res,
+    () => {}
+  )
+})
 
 app.get("/state", async (req, res) => {
   try {
@@ -87,8 +100,28 @@ app.get("/state", async (req, res) => {
     res.status(500).json({ error: "Failed to read state" })
   }
 })
+app.get("/api/state", async (req, res) => {
+  try {
+    const st = await db.getState()
+    console.log("[STATE] ✅ GET /api/state - returning:", Object.keys(st).join(", "))
+    res.json(st)
+  } catch (e) {
+    console.error("[STATE] ❌ GET /api/state error:", e.message)
+    res.status(500).json({ error: "Failed to read state" })
+  }
+})
 
 app.post("/state", async (req, res) => {
+  try {
+    await db.saveState(req.body)
+    console.log("[STATE] ✅ POST /api/state - saved successfully")
+    res.json({ ok: true })
+  } catch (e) {
+    console.error("[STATE] ❌ POST /api/state error:", e.message)
+    res.status(500).json({ error: "Failed to write state" })
+  }
+})
+app.post("/api/state", async (req, res) => {
   try {
     await db.saveState(req.body)
     console.log("[STATE] ✅ POST /api/state - saved successfully")
@@ -111,8 +144,39 @@ app.get("/collections/:name", async (req, res) => {
     res.status(500).json({ error: "failed" })
   }
 })
+app.get("/api/collections/:name", async (req, res) => {
+  try {
+    const c = req.params.name
+    let items = await db.list(c)
+    if (c === "accounts") items = items.filter((i) => i && String(i.id).toLowerCase() !== "simuser")
+    console.log("[COLLECTIONS] ✅ GET /api/collections/" + c + " - found " + items.length + " items")
+    res.json(items)
+  } catch (e) {
+    console.error("[COLLECTIONS] ❌ GET error:", e.message)
+    res.status(500).json({ error: "failed" })
+  }
+})
 
 app.get("/collections/:name/:id", async (req, res) => {
+  try {
+    const { name, id } = req.params
+    if (name === "accounts" && String(id).toLowerCase() === "simuser") {
+      console.log("[COLLECTIONS] ✅ GET /api/collections/accounts/" + id + " - simuser not stored")
+      return res.status(404).json({})
+    }
+    const item = await db.get(name, id)
+    if (!item) {
+      console.log("[COLLECTIONS] ⚠️ GET /api/collections/" + name + "/" + id + " - not found")
+      return res.status(404).json({})
+    }
+    console.log("[COLLECTIONS] ✅ GET /api/collections/" + name + "/" + id + " - found")
+    res.json(item)
+  } catch (e) {
+    console.error("[COLLECTIONS] ❌ GET error:", e.message)
+    res.status(500).json({ error: "failed" })
+  }
+})
+app.get("/api/collections/:name/:id", async (req, res) => {
   try {
     const { name, id } = req.params
     if (name === "accounts" && String(id).toLowerCase() === "simuser") {
@@ -160,8 +224,45 @@ app.post("/collections/:name", async (req, res) => {
     res.status(500).json({ error: "failed" })
   }
 })
+app.post("/api/collections/:name", async (req, res) => {
+  try {
+    const name = req.params.name
+    let item = req.body
+    if (name === "accounts" && item?.id) {
+      const nid = String(item.id).trim().toLowerCase()
+      if (nid === "simuser") {
+        await db.remove(name, nid)
+        console.log("[COLLECTIONS] ✅ POST /api/collections/accounts - removed simuser")
+        return res.json({ ok: true, item: null })
+      }
+      if (item.pin) {
+        const pinHash = bcrypt.hashSync(item.pin, 10)
+        item = { ...item, pinHash }
+        delete item.pin
+      }
+      item.id = nid
+      console.log("[COLLECTIONS] ✅ POST /api/collections/accounts - saving account " + nid + " with state keys:", Object.keys(item.state || {}).join(", "))
+    }
+    const saved = await db.upsert(name, item)
+    res.json({ ok: true, item: saved })
+  } catch (e) {
+    console.error("[COLLECTIONS] ❌ POST error:", e.message)
+    res.status(500).json({ error: "failed" })
+  }
+})
 
 app.delete("/collections/:name/:id", async (req, res) => {
+  try {
+    const { name, id } = req.params
+    await db.remove(name, id)
+    console.log("[COLLECTIONS] ✅ DELETE /api/collections/" + name + "/" + id)
+    res.json({ ok: true })
+  } catch (e) {
+    console.error("[COLLECTIONS] ❌ DELETE error:", e.message)
+    res.status(500).json({ error: "failed" })
+  }
+})
+app.delete("/api/collections/:name/:id", async (req, res) => {
   try {
     const { name, id } = req.params
     await db.remove(name, id)
@@ -183,8 +284,18 @@ app.post("/reset", async (req, res) => {
     res.status(500).json({ error: "failed to reset" })
   }
 })
+app.post("/api/reset", async (req, res) => {
+  try {
+    const seed = await db.resetToSeed()
+    console.log("[RESET] ✅ POST /api/reset - data reset to seed")
+    res.json({ ok: true, seed })
+  } catch (e) {
+    console.error("[RESET] ❌ POST /api/reset error:", e.message)
+    res.status(500).json({ error: "failed to reset" })
+  }
+})
 
-const PORT = process.env.PORT || 80
+const PORT = process.env.PORT || 4001
 const HOST = process.env.HOST || '0.0.0.0'
 
 app.listen(PORT, HOST, () => {

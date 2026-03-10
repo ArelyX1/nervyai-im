@@ -88,13 +88,28 @@ function BackendHealthCheck() {
 
   React.useEffect(() => {
     const checkBackend = async () => {
-      // Use same logic as useAppStore for URL detection
-      let url = localStorage.getItem('backendUrl')
-      if (!url) {
-        url = '/api/health'
-      } else {
-        url = url.replace(/\/$/, '') + '/health'
+      // Use similar logic as useAppStore for URL detection
+      let base = typeof window !== 'undefined' ? localStorage.getItem('backendUrl') || '' : ''
+      if (!base) {
+        const hostname = window.location.hostname
+        const isLocalNetwork =
+          hostname === 'localhost' ||
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('10.') ||
+          (hostname.startsWith('172.') && (() => {
+            const parts = hostname.split('.')
+            const second = parseInt(parts[1], 10)
+            return second >= 16 && second <= 31
+          })())
+
+        if (isLocalNetwork) {
+          base = `http://${hostname}:4001`
+        } else {
+          base = '/api'
+        }
       }
+
+      const url = base.replace(/\/$/, '') + '/health'
       
       setBackendUrl(url)
       console.log('[HEALTH] Checking:', url)

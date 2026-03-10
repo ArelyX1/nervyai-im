@@ -117,9 +117,7 @@ export function useAppStore(): AppStore {
   function getDefaultBackendUrl(): string | null {
     if (typeof window === "undefined") return null
 
-    // Priority 1: Check if explicitly set via environment variable (for Docker/other envs)
-    // This is injected at build time or runtime via meta tag
-    // Usage: <meta name="backend-url" content="https://api.example.com">
+    // Priority 1: Check if explicitly set via meta tag
     if (typeof document !== "undefined") {
       const metaBackendUrl = document.querySelector('meta[name="backend-url"]')?.getAttribute('content')
       if (metaBackendUrl) {
@@ -135,7 +133,25 @@ export function useAppStore(): AppStore {
       return stored
     }
 
-    // Priority 3: Default to same-origin Next.js API routes
+    // Priority 3: Local dev / LAN: hit backend on port 4001
+    const hostname = window.location.hostname
+    const isLocalNetwork =
+      hostname === "localhost" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      (hostname.startsWith("172.") && (() => {
+        const parts = hostname.split(".")
+        const second = parseInt(parts[1], 10)
+        return second >= 16 && second <= 31
+      })())
+
+    if (isLocalNetwork) {
+      const backendUrl = `http://${hostname}:4001`
+      console.debug('[CLIENT] getDefaultBackendUrl: using local network URL=', backendUrl)
+      return backendUrl
+    }
+
+    // Priority 4: Fallback to same-origin /api base path
     console.debug('[CLIENT] getDefaultBackendUrl: using same-origin /api base path')
     return "/api"
   }
